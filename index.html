@@ -1,0 +1,2345 @@
+<!DOCTYPE html>
+<html lang="es" class="">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finanzas PRO — Centro Financiero Personal Inteligente</title>
+  <meta name="description" content="Finanzas PRO: control total de gastos, tarjetas, cuotas, intereses, presupuestos y metas." />
+
+  <!-- ============ DEPENDENCIAS (CDN) ============ -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- ============ CONFIGURACIÓN TAILWIND ============ -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',
+              500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81',
+            },
+          },
+          boxShadow: {
+            soft: '0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10)',
+            card: '0 10px 30px -12px rgba(16,24,40,.25)',
+          },
+          keyframes: {
+            shimmer: { '100%': { transform: 'translateX(100%)' } },
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- ============ ESTILOS PROPIOS ============ -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    html, body { height: 100%; }
+    body { -webkit-font-smoothing: antialiased; }
+
+    /* Scrollbar moderno */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(120,120,140,.35); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(120,120,140,.6); background-clip: padding-box; }
+
+    /* Glass / superficies (CSS plano: el CDN de Tailwind no procesa @apply aquí) */
+    .glass { backdrop-filter: blur(14px); }
+    .surface { background:#ffffff; border:1px solid #e2e8f0; }
+    .dark .surface { background:#0f172a; border-color:#1e293b; }
+
+    /* Tarjeta bancaria 3D */
+    .bank-card {
+      aspect-ratio: 1.586/1;
+      border-radius: 1.25rem;
+      position: relative;
+      overflow: hidden;
+      color: #fff;
+      transform-style: preserve-3d;
+      transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s;
+      box-shadow: 0 18px 40px -16px rgba(0,0,0,.55);
+    }
+    .bank-card:hover { transform: translateY(-6px) rotateX(4deg) rotateY(-4deg) scale(1.015); }
+    .bank-card::after {
+      content:''; position:absolute; inset:0;
+      background: radial-gradient(120% 120% at 0% 0%, rgba(255,255,255,.28), transparent 45%);
+      pointer-events:none;
+    }
+    .bank-card .chip {
+      width: 44px; height: 34px; border-radius: 7px;
+      background: linear-gradient(135deg,#f5d57e,#c79a3a);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+    }
+    .card-stripe { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.08) 0 12px, transparent 12px 24px); }
+
+    /* Nav activo */
+    .nav-link.active { background:#4f46e5; color:#fff; box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10); }
+    .nav-link.active i { color:#fff !important; }
+
+    /* Transición de vistas */
+    .view { animation: fadeUp .35s ease both; }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+
+    /* Skeleton shimmer */
+    .skeleton { position: relative; overflow: hidden; background: rgba(148,163,184,.18); }
+    .skeleton::after { content:''; position:absolute; inset:0; transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent); animation: shimmer 1.4s infinite; }
+
+    .ring-progress { transition: stroke-dashoffset .6s ease; }
+
+    [x-cloak], .hidden-init { display: none !important; }
+    input, select, textarea { color-scheme: light dark; }
+  </style>
+</head>
+
+<body class="font-sans bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
+
+  <!-- ============================================================= -->
+  <!-- PANTALLA DE AUTENTICACIÓN                                     -->
+  <!-- ============================================================= -->
+  <div id="auth-screen" class="min-h-screen w-full flex items-stretch">
+    <!-- Panel ilustrativo -->
+    <div class="hidden lg:flex w-1/2 relative bg-gradient-to-br from-brand-700 via-brand-600 to-indigo-800 text-white p-12 flex-col justify-between overflow-hidden">
+      <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/10 blur-2xl"></div>
+      <div class="absolute bottom-0 -left-20 w-96 h-96 rounded-full bg-indigo-400/20 blur-3xl"></div>
+      <div class="relative z-10">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-white/15 grid place-items-center text-2xl"><i class="fa-solid fa-chart-pie"></i></div>
+          <span class="text-2xl font-extrabold tracking-tight">Finanzas <span class="font-light">PRO</span></span>
+        </div>
+        <h1 class="mt-16 text-4xl font-extrabold leading-tight">Tu centro financiero<br/>personal inteligente.</h1>
+        <p class="mt-4 text-white/80 max-w-md">Controla tarjetas, cuotas, intereses, presupuestos y metas en un solo lugar. Diseñado para que tomes el control total de tu dinero.</p>
+      </div>
+      <ul class="relative z-10 space-y-3 text-white/90">
+        <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check"></i> Cálculo automático de cuotas e intereses por mes</li>
+        <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check"></i> Tarjetas visuales con cortes y fechas de pago</li>
+        <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check"></i> Reportes, presupuestos y asistente financiero</li>
+      </ul>
+    </div>
+
+    <!-- Formularios -->
+    <div class="w-full lg:w-1/2 flex items-center justify-center p-6">
+      <div class="w-full max-w-md">
+        <div class="lg:hidden flex items-center gap-3 mb-8 justify-center">
+          <div class="w-11 h-11 rounded-xl bg-brand-600 text-white grid place-items-center text-2xl"><i class="fa-solid fa-chart-pie"></i></div>
+          <span class="text-2xl font-extrabold tracking-tight">Finanzas <span class="font-light text-brand-600">PRO</span></span>
+        </div>
+
+        <!-- LOGIN -->
+        <form id="form-login" class="surface rounded-3xl p-8 shadow-card">
+          <h2 class="text-2xl font-bold">Bienvenido de nuevo</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Ingresa para continuar a tu panel.</p>
+          <div class="mt-6 space-y-4">
+            <div>
+              <label class="text-sm font-medium">Correo</label>
+              <input name="email" type="email" required autocomplete="username" placeholder="tucorreo@email.com"
+                class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" />
+            </div>
+            <div>
+              <label class="text-sm font-medium">Contraseña</label>
+              <div class="relative mt-1">
+                <input name="password" type="password" required autocomplete="current-password" placeholder="••••••••"
+                  class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 pr-11 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" />
+                <button type="button" data-toggle-pass class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><i class="fa-regular fa-eye"></i></button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <label class="flex items-center gap-2 text-slate-500"><input type="checkbox" name="remember" class="rounded" checked/> Recordarme</label>
+              <button type="button" id="link-forgot" class="text-brand-600 hover:underline font-medium">¿Olvidaste tu contraseña?</button>
+            </div>
+            <button type="submit" class="w-full rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 transition shadow-soft">Iniciar sesión</button>
+          </div>
+          <p class="text-center text-sm text-slate-500 mt-6">¿No tienes cuenta?
+            <button type="button" id="link-to-register" class="text-brand-600 font-semibold hover:underline">Crear cuenta</button>
+          </p>
+          <div class="mt-6 text-xs text-center text-slate-400 bg-slate-100 dark:bg-slate-800/60 rounded-xl p-3">
+            <i class="fa-solid fa-circle-info"></i> Admin demo: <b>andresacost12@gmail.com</b> / <b>andres12</b>
+          </div>
+        </form>
+
+        <!-- REGISTRO -->
+        <form id="form-register" class="surface rounded-3xl p-8 shadow-card hidden">
+          <h2 class="text-2xl font-bold">Crear cuenta</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Empieza a organizar tus finanzas hoy.</p>
+          <div class="mt-6 space-y-4">
+            <div>
+              <label class="text-sm font-medium">Nombre completo</label>
+              <input name="name" type="text" required placeholder="Tu nombre"
+                class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 focus:ring-2 focus:ring-brand-500 outline-none" />
+            </div>
+            <div>
+              <label class="text-sm font-medium">Correo</label>
+              <input name="email" type="email" required placeholder="tucorreo@email.com"
+                class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 focus:ring-2 focus:ring-brand-500 outline-none" />
+            </div>
+            <div>
+              <label class="text-sm font-medium">Contraseña</label>
+              <input name="password" type="password" required minlength="5" placeholder="Mínimo 5 caracteres"
+                class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 focus:ring-2 focus:ring-brand-500 outline-none" />
+            </div>
+            <button type="submit" class="w-full rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 transition shadow-soft">Registrarme</button>
+          </div>
+          <p class="text-center text-sm text-slate-500 mt-6">¿Ya tienes cuenta?
+            <button type="button" id="link-to-login" class="text-brand-600 font-semibold hover:underline">Iniciar sesión</button>
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- APLICACIÓN PRINCIPAL                                          -->
+  <!-- ============================================================= -->
+  <div id="app" class="hidden min-h-screen">
+    <!-- Overlay móvil -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/40 z-30 hidden lg:hidden"></div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="fixed z-40 inset-y-0 left-0 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col -translate-x-full lg:translate-x-0 transition-transform duration-300">
+      <div class="h-16 flex items-center gap-3 px-5 border-b border-slate-200 dark:border-slate-800">
+        <div class="w-9 h-9 rounded-xl bg-brand-600 text-white grid place-items-center"><i class="fa-solid fa-chart-pie"></i></div>
+        <span class="text-lg font-extrabold tracking-tight">Finanzas <span class="font-light text-brand-600">PRO</span></span>
+      </div>
+      <nav id="nav-menu" class="flex-1 overflow-y-auto p-3 space-y-1 text-sm"></nav>
+      <div class="p-3 border-t border-slate-200 dark:border-slate-800">
+        <div id="sidebar-user" class="flex items-center gap-3 p-2 rounded-xl"></div>
+      </div>
+    </aside>
+
+    <!-- CONTENIDO -->
+    <div class="lg:pl-72 flex flex-col min-h-screen">
+      <!-- TOPBAR -->
+      <header class="sticky top-0 z-20 h-16 bg-white/80 dark:bg-slate-900/80 glass border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 px-4 sm:px-6">
+        <button id="btn-menu" class="lg:hidden w-10 h-10 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-bars"></i></button>
+        <div class="flex-1 min-w-0">
+          <h1 id="page-title" class="text-lg font-bold truncate">Dashboard</h1>
+        </div>
+        <div class="hidden sm:flex items-center relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 text-slate-400 text-sm"></i>
+          <input id="global-search-input" type="text" placeholder="Buscar..." class="w-56 rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none" />
+        </div>
+        <button id="btn-notifications" class="relative w-10 h-10 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+          <i class="fa-regular fa-bell"></i>
+          <span id="notif-badge" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full hidden"></span>
+        </button>
+        <button id="btn-theme" class="w-10 h-10 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-moon"></i></button>
+        <button id="btn-quick-add" class="hidden sm:inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 shadow-soft"><i class="fa-solid fa-plus"></i> Nuevo gasto</button>
+      </header>
+
+      <!-- VISTAS -->
+      <main id="main-content" class="flex-1 p-4 sm:p-6 max-w-[1400px] w-full mx-auto"></main>
+
+      <footer class="px-6 py-4 text-center text-xs text-slate-400">
+        Finanzas PRO · Datos guardados localmente en tu navegador · <span id="footer-year"></span>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Contenedor de modales dinámicos -->
+  <div id="modal-root"></div>
+  <!-- Panel de notificaciones -->
+  <div id="notif-panel" class="fixed top-16 right-4 z-50 w-80 max-w-[92vw] hidden"></div>
+
+  <!-- ============================================================= -->
+  <!-- APLICACIÓN — JAVASCRIPT (módulos internos)                     -->
+  <!-- ============================================================= -->
+  <script>
+  "use strict";
+/* =================================================================
+ * FINANZAS PRO
+ * Centro Financiero Personal Inteligente
+ * Arquitectura modular (módulos internos namespaced) — Vanilla ES2023
+ * Capas: Config · Utils · Storage(Repository) · Models · Services · UI · Router · App
+ * ================================================================= */
+
+/* ----------------------------------------------------------------
+ * 1) CONFIGURACIÓN GLOBAL
+ * ---------------------------------------------------------------- */
+const CONFIG = {
+  appName: 'Finanzas PRO',
+  version: '1.0.0',
+  storagePrefix: 'finpro:',
+  currency: 'COP',
+  locale: 'es-CO',
+  admin: { name: 'Andrés Acosta', email: 'andresacost12@gmail.com', password: 'andres12' },
+  categories: ['Comida','Transporte','Ocio','Salud','Educación','Tecnología','Hogar','Servicios','Ropa','Mascotas','Viajes','Otros'],
+  banks: ['Bancolombia','Davivienda','Banco de Bogotá','BBVA','Nu','Scotiabank Colpatria','Falabella','Banco Popular','AV Villas','Itaú','Otro'],
+  paymentDaysAhead: 7,   // ventana "próximo pago"
+};
+
+/* ----------------------------------------------------------------
+ * 2) UTILIDADES
+ * ---------------------------------------------------------------- */
+const Utils = {
+  uid(prefix = 'id') {
+    return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  },
+  nowISO() { return new Date().toISOString(); },
+  todayStr() { return new Date().toISOString().slice(0, 10); },
+
+  money(n) {
+    const v = Number(n) || 0;
+    return new Intl.NumberFormat(CONFIG.locale, { style: 'currency', currency: CONFIG.currency, maximumFractionDigits: 0 }).format(v);
+  },
+  number(n) { return new Intl.NumberFormat(CONFIG.locale).format(Number(n) || 0); },
+  pct(n) { return (Number(n) || 0).toFixed(1) + '%'; },
+
+  // Fechas
+  parseDate(str) { const d = new Date(str + (String(str).length === 10 ? 'T00:00:00' : '')); return isNaN(d) ? new Date(str) : d; },
+  monthKey(dateStr) { const d = Utils.parseDate(dateStr); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); },
+  monthName(m) { return ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][m - 1] || ''; },
+  fmtDate(str) {
+    if (!str) return '—';
+    const d = Utils.parseDate(str);
+    return d.toLocaleDateString(CONFIG.locale, { day: '2-digit', month: 'short', year: 'numeric' });
+  },
+  fmtDateShort(str) { if (!str) return '—'; const d = Utils.parseDate(str); return d.toLocaleDateString(CONFIG.locale, { day: '2-digit', month: 'short' }); },
+  daysUntil(str) { const d = Utils.parseDate(str); const t = new Date(); t.setHours(0,0,0,0); return Math.round((d - t) / 86400000); },
+  addMonths(date, n) { const d = new Date(date); const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate())); return d; },
+  dateOnMonth(year, monthIdx, day) { const last = new Date(year, monthIdx + 1, 0).getDate(); return new Date(year, monthIdx, Math.min(day, last)); },
+  iso(d) { return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10); },
+
+  // Hash de contraseña (SHA-256) — nunca guardamos texto plano
+  async hash(text) {
+    try {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+      // fallback simple (entornos sin crypto.subtle / http)
+      let h = 0; for (let i = 0; i < text.length; i++) { h = (h << 5) - h + text.charCodeAt(i); h |= 0; }
+      return 'fb' + Math.abs(h).toString(16);
+    }
+  },
+
+  escape(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); },
+  clamp(n, min, max) { return Math.max(min, Math.min(max, n)); },
+  sum(arr, fn) { return arr.reduce((a, x) => a + (fn ? fn(x) : x), 0); },
+  groupBy(arr, fn) { return arr.reduce((m, x) => { const k = fn(x); (m[k] ||= []).push(x); return m; }, {}); },
+  debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; },
+
+  // Toast / alertas (SweetAlert2 con fallback)
+  toast(title, icon = 'success') {
+    if (window.Swal) Swal.fire({ toast: true, position: 'top-end', timer: 2600, showConfirmButton: false, icon, title, background: UI.isDark() ? '#0f172a' : '#fff', color: UI.isDark() ? '#e2e8f0' : '#0f172a' });
+    else console.log(`[${icon}] ${title}`);
+  },
+  async confirm(title, text = '', confirmText = 'Sí, continuar') {
+    if (window.Swal) {
+      const r = await Swal.fire({ title, text, icon: 'warning', showCancelButton: true, confirmButtonText: confirmText, cancelButtonText: 'Cancelar', confirmButtonColor: '#e11d48', cancelButtonColor: '#64748b', background: UI.isDark() ? '#0f172a' : '#fff', color: UI.isDark() ? '#e2e8f0' : '#0f172a' });
+      return r.isConfirmed;
+    }
+    return window.confirm(title);
+  },
+};
+
+/* atajos DOM */
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const h  = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+
+/* ----------------------------------------------------------------
+ * 3) CAPA DE PERSISTENCIA (abstracción tipo Repository)
+ *    Hoy: LocalStorage.  Mañana: cambiar SOLO Storage._read/_write
+ *    por llamadas a SQLite / MySQL / PostgreSQL / Supabase.
+ * ---------------------------------------------------------------- */
+const Storage = {
+  _key(k) { return CONFIG.storagePrefix + k; },
+  read(k, fallback = null) {
+    try { const raw = localStorage.getItem(this._key(k)); return raw == null ? fallback : JSON.parse(raw); }
+    catch { return fallback; }
+  },
+  write(k, value) { localStorage.setItem(this._key(k), JSON.stringify(value)); },
+  remove(k) { localStorage.removeItem(this._key(k)); },
+  keys() { return Object.keys(localStorage).filter(k => k.startsWith(CONFIG.storagePrefix)).map(k => k.slice(CONFIG.storagePrefix.length)); },
+};
+
+/* Factoría de repositorios con CRUD + auditoría, datos aislados por usuario */
+function Repository(name) {
+  const key = () => `u:${State.userId || 'anon'}:${name}`;
+  return {
+    name,
+    all() { return Storage.read(key(), []); },
+    save(list) { Storage.write(key(), list); return list; },
+    find(id) { return this.all().find(x => x.id === id) || null; },
+    where(fn) { return this.all().filter(fn); },
+    insert(obj) {
+      const list = this.all();
+      obj.id ||= Utils.uid(name.slice(0, 3));
+      obj.createdAt ||= Utils.nowISO();
+      list.push(obj); this.save(list);
+      Audit.log('create', name, obj.id, obj.description || obj.name || obj.id);
+      return obj;
+    },
+    update(id, patch) {
+      const list = this.all(); const i = list.findIndex(x => x.id === id);
+      if (i < 0) return null;
+      list[i] = { ...list[i], ...patch, updatedAt: Utils.nowISO() };
+      this.save(list);
+      Audit.log('update', name, id, list[i].description || list[i].name || id);
+      return list[i];
+    },
+    remove(id) {
+      const list = this.all().filter(x => x.id !== id);
+      this.save(list);
+      Audit.log('delete', name, id, '');
+      return true;
+    },
+    bulkSet(list) { this.save(list); return list; },
+  };
+}
+
+/* Repositorios de dominio */
+const Repos = {
+  cards:     Repository('cards'),
+  rates:     Repository('rates'),       // tasas de interés por mes
+  expenses:  Repository('expenses'),    // compras / movimientos (ingresos y egresos)
+  budgets:   Repository('budgets'),
+  goals:     Repository('goals'),
+  recurring: Repository('recurring'),
+  audit:     Repository('audit'),
+};
+
+/* ----------------------------------------------------------------
+ * 4) AUDITORÍA / HISTORIAL
+ * ---------------------------------------------------------------- */
+const Audit = {
+  log(action, entity, entityId, label = '') {
+    if (entity === 'audit' || !State.userId) return; // evita recursión
+    const list = Storage.read(`u:${State.userId}:audit`, []);
+    list.unshift({
+      id: Utils.uid('aud'), action, entity, entityId, label,
+      user: State.user?.email || 'sistema',
+      at: Utils.nowISO(),
+    });
+    Storage.write(`u:${State.userId}:audit`, list.slice(0, 500));
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 5) ESTADO GLOBAL
+ * ---------------------------------------------------------------- */
+const State = {
+  user: null,
+  userId: null,
+  view: 'dashboard',
+  charts: {},          // instancias Chart.js para destruir/recrear
+  searchQuery: '',
+};
+
+/* ----------------------------------------------------------------
+ * 6) UI — helpers de interfaz (tema, modales, componentes)
+ * ---------------------------------------------------------------- */
+const UI = {
+  isDark() { return document.documentElement.classList.contains('dark'); },
+  applyTheme(theme) {
+    const dark = theme === 'dark';
+    document.documentElement.classList.toggle('dark', dark);
+    Storage.write('theme', theme);
+    const icon = $('#btn-theme i');
+    if (icon) icon.className = dark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    // refrescar gráficos para colores
+    if (State.user) Router.refreshCharts();
+  },
+  toggleTheme() { this.applyTheme(this.isDark() ? 'light' : 'dark'); },
+  initTheme() {
+    const saved = Storage.read('theme', null);
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    this.applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+  },
+
+  /* Modal genérico */
+  modal({ title, body, footer = '', size = 'max-w-lg', onMount } = {}) {
+    this.closeModal();
+    const wrap = h(`
+      <div class="modal-backdrop fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm p-0 sm:p-4 animate__animated animate__fadeIn animate__faster">
+        <div class="modal-box w-full ${size} bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-card border border-slate-200 dark:border-slate-800 max-h-[92vh] flex flex-col animate__animated animate__fadeInUp animate__faster">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+            <h3 class="text-lg font-bold">${title}</h3>
+            <button data-close class="w-9 h-9 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="p-6 overflow-y-auto">${body}</div>
+          ${footer ? `<div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap gap-3 justify-end">${footer}</div>` : ''}
+        </div>
+      </div>`);
+    wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close]')) UI.closeModal(); });
+    $('#modal-root').appendChild(wrap);
+    onMount && onMount(wrap);
+    return wrap;
+  },
+  closeModal() { const m = $('#modal-root .modal-backdrop'); if (m) m.remove(); },
+
+  /* Componentes reutilizables */
+  kpi({ label, value, icon, color = 'brand', sub = '' }) {
+    return `
+      <div class="surface rounded-2xl p-5 shadow-soft hover:shadow-card transition">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">${label}</p>
+            <p class="mt-2 text-2xl font-extrabold tracking-tight">${value}</p>
+            ${sub ? `<p class="mt-1 text-xs text-slate-500">${sub}</p>` : ''}
+          </div>
+          <div class="w-11 h-11 rounded-xl grid place-items-center bg-${color}-100 text-${color}-600 dark:bg-${color}-500/15 dark:text-${color}-300">
+            <i class="fa-solid ${icon}"></i>
+          </div>
+        </div>
+      </div>`;
+  },
+  badge(text, color = 'slate') {
+    return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-${color}-100 text-${color}-700 dark:bg-${color}-500/15 dark:text-${color}-300">${text}</span>`;
+  },
+  progress(pct, color = 'brand') {
+    const p = Utils.clamp(pct, 0, 100);
+    return `<div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden"><div class="h-full rounded-full bg-${color}-500 transition-all" style="width:${p}%"></div></div>`;
+  },
+  empty(msg, icon = 'fa-inbox', actionHtml = '') {
+    return `<div class="text-center py-16 text-slate-400">
+      <div class="text-5xl mb-3"><i class="fa-solid ${icon}"></i></div>
+      <p class="font-medium">${msg}</p>${actionHtml ? `<div class="mt-4">${actionHtml}</div>` : ''}</div>`;
+  },
+  field(label, inputHtml, hint = '') {
+    return `<label class="block"><span class="text-sm font-medium">${label}</span>${inputHtml}${hint ? `<span class="block text-xs text-slate-400 mt-1">${hint}</span>` : ''}</label>`;
+  },
+  input(name, opts = {}) {
+    const { type = 'text', value = '', placeholder = '', required = false, step = '', min = '', extra = '' } = opts;
+    return `<input name="${name}" type="${type}" value="${Utils.escape(value)}" placeholder="${placeholder}" ${required ? 'required' : ''} ${step ? `step="${step}"` : ''} ${min !== '' ? `min="${min}"` : ''} ${extra}
+      class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-2.5 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" />`;
+  },
+  select(name, options, value = '', extra = '') {
+    const opts = options.map(o => { const v = typeof o === 'object' ? o.value : o; const l = typeof o === 'object' ? o.label : o; return `<option value="${Utils.escape(v)}" ${String(v) === String(value) ? 'selected' : ''}>${Utils.escape(l)}</option>`; }).join('');
+    return `<select name="${name}" ${extra} class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-2.5 focus:ring-2 focus:ring-brand-500 outline-none">${opts}</select>`;
+  },
+  textarea(name, value = '', placeholder = '') {
+    return `<textarea name="${name}" rows="2" placeholder="${placeholder}" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-2.5 focus:ring-2 focus:ring-brand-500 outline-none">${Utils.escape(value)}</textarea>`;
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 7) MÓDULO: AUTENTICACIÓN
+ * ---------------------------------------------------------------- */
+const Auth = {
+  getUsers() { return Storage.read('users', []); },
+  saveUsers(u) { Storage.write('users', u); },
+
+  async seedAdmin() {
+    const users = this.getUsers();
+    if (!users.some(u => u.email === CONFIG.admin.email)) {
+      users.push({
+        id: 'usr_admin',
+        name: CONFIG.admin.name,
+        email: CONFIG.admin.email,
+        passwordHash: await Utils.hash(CONFIG.admin.password),
+        role: 'admin',
+        createdAt: Utils.nowISO(),
+      });
+      this.saveUsers(users);
+    }
+  },
+
+  async register({ name, email, password }) {
+    email = email.trim().toLowerCase();
+    const users = this.getUsers();
+    if (users.some(u => u.email === email)) throw new Error('Ya existe una cuenta con ese correo.');
+    const user = { id: Utils.uid('usr'), name: name.trim(), email, passwordHash: await Utils.hash(password), role: 'usuario', createdAt: Utils.nowISO() };
+    users.push(user); this.saveUsers(users);
+    return user;
+  },
+
+  async login(email, password) {
+    email = email.trim().toLowerCase();
+    const user = this.getUsers().find(u => u.email === email);
+    if (!user) throw new Error('Correo no registrado.');
+    const hash = await Utils.hash(password);
+    if (hash !== user.passwordHash) throw new Error('Contraseña incorrecta.');
+    Storage.write('session', { userId: user.id, at: Utils.nowISO() });
+    this.setCurrent(user);
+    return user;
+  },
+
+  setCurrent(user) {
+    State.user = { ...user }; delete State.user.passwordHash;
+    State.userId = user.id;
+  },
+
+  logout() {
+    Storage.remove('session');
+    State.user = null; State.userId = null;
+    location.reload();
+  },
+
+  restore() {
+    const session = Storage.read('session', null);
+    if (!session) return false;
+    const user = this.getUsers().find(u => u.id === session.userId);
+    if (!user) return false;
+    this.setCurrent(user);
+    return true;
+  },
+
+  async forgot(email) {
+    const user = this.getUsers().find(u => u.email === email.trim().toLowerCase());
+    // Recuperación simulada: generamos token y permitimos definir nueva contraseña
+    return !!user;
+  },
+
+  async resetPassword(email, newPassword) {
+    const users = this.getUsers();
+    const i = users.findIndex(u => u.email === email.trim().toLowerCase());
+    if (i < 0) return false;
+    users[i].passwordHash = await Utils.hash(newPassword);
+    this.saveUsers(users);
+    return true;
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 8) MOTOR FINANCIERO (servicio central de cálculo)
+ *    - Tasas por mes  - Amortización  - Fechas de pago/corte
+ *    - Cuotas  - Deuda  - Uso de cupo  - Flujo de caja
+ * ---------------------------------------------------------------- */
+const Engine = {
+  /* --- TASAS DE INTERÉS POR MES --- */
+  // Devuelve la tasa mensual (%) vigente para la fecha de la compra.
+  rateForDate(dateStr) {
+    const d = Utils.parseDate(dateStr);
+    const year = d.getFullYear(), month = d.getMonth() + 1;
+    const rates = Repos.rates.all();
+    const exact = rates.find(r => Number(r.year) === year && Number(r.month) === month);
+    if (exact) return Number(exact.rate);
+    // Fallback: tasa más reciente ANTERIOR a la fecha (nunca futura)
+    const prior = rates
+      .filter(r => (Number(r.year) < year) || (Number(r.year) === year && Number(r.month) <= month))
+      .sort((a, b) => (b.year - a.year) || (b.month - a.month))[0];
+    return prior ? Number(prior.rate) : 0;
+  },
+
+  /* --- AMORTIZACIÓN (sistema francés / cuota fija) --- */
+  // P: capital, ratePct: % mensual, n: nº cuotas → array de cuotas {capital, interest, value}
+  amortize(P, ratePct, n) {
+    P = Number(P) || 0; n = Math.max(1, parseInt(n) || 1);
+    const i = (Number(ratePct) || 0) / 100;
+    const rows = [];
+    if (i <= 0) {
+      const base = Math.round(P / n);
+      for (let k = 1; k <= n; k++) {
+        const value = (k === n) ? P - base * (n - 1) : base;
+        rows.push({ capital: value, interest: 0, value });
+      }
+      return rows;
+    }
+    const cuota = P * (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+    let balance = P;
+    for (let k = 1; k <= n; k++) {
+      let interest = balance * i;
+      let capital = cuota - interest;
+      if (k === n) { capital = balance; } // ajuste final
+      balance -= capital;
+      rows.push({ capital: Math.round(capital), interest: Math.round(interest), value: Math.round(capital + interest) });
+    }
+    return rows;
+  },
+
+  /* --- FECHA DE CORTE Y PAGO de una compra según la tarjeta --- */
+  // Regla: si la compra ocurre el día del corte o antes → entra a ese corte;
+  // si es después → entra al corte del mes siguiente.
+  // La fecha de pago es el "payDay"; si payDay <= cutDay se asume el mes siguiente al corte.
+  billingDates(card, purchaseDateStr) {
+    const d = Utils.parseDate(purchaseDateStr);
+    const cutDay = Number(card?.cutDay) || 1;
+    const payDay = Number(card?.payDay) || 1;
+    let cut = Utils.dateOnMonth(d.getFullYear(), d.getMonth(), cutDay);
+    if (d.getDate() > cutDay) cut = Utils.addMonths(cut, 1);
+    // Pago: normalmente el mes siguiente al corte. Si payDay > cutDay puede ser el mismo mes del corte.
+    let payMonthOffset = (payDay > cutDay) ? 0 : 1;
+    let pay = Utils.dateOnMonth(cut.getFullYear(), cut.getMonth() + payMonthOffset, payDay);
+    return { cut: Utils.iso(cut), firstPay: Utils.iso(pay) };
+  },
+
+  /* --- GENERAR CUOTAS de una compra a crédito --- */
+  buildInstallments(expense, card) {
+    const n = Math.max(1, parseInt(expense.installmentsCount) || 1);
+    const ratePct = Number(expense.interestRate ?? this.rateForDate(expense.date));
+    const rows = this.amortize(expense.amount, ratePct, n);
+    const { firstPay } = card ? this.billingDates(card, expense.date) : { firstPay: Utils.iso(Utils.addMonths(Utils.parseDate(expense.date), 1)) };
+    const first = Utils.parseDate(firstPay);
+    return rows.map((r, idx) => ({
+      number: idx + 1,
+      dueDate: Utils.iso(Utils.addMonths(first, idx)),
+      value: r.value,
+      capital: r.capital,
+      interest: r.interest,
+      status: 'pendiente',          // pendiente | pagada | vencida
+      paymentDate: null,
+      receipt: null,
+      notes: '',
+    }));
+  },
+
+  // Recalcula estado "vencida" para cuotas pendientes con fecha pasada
+  refreshInstallmentStatus(exp) {
+    if (!exp.installments) return exp;
+    const today = Utils.todayStr();
+    exp.installments.forEach(c => {
+      if (c.status === 'pendiente' && c.dueDate < today) c.status = 'vencida';
+    });
+    return exp;
+  },
+
+  /* --- DERIVADOS DE UNA COMPRA --- */
+  expenseTotals(exp) {
+    if (exp.method !== 'credito' || !exp.installments) {
+      const paid = exp.status === 'pagado';
+      return { total: exp.amount, paid: paid ? exp.amount : 0, pending: paid ? 0 : exp.amount, paidCount: paid ? 1 : 0, totalCount: 1, capitalPending: paid ? 0 : exp.amount, interestPending: 0 };
+    }
+    const ins = exp.installments;
+    const totalCount = ins.length;
+    const paidCount = ins.filter(c => c.status === 'pagada').length;
+    const total = Utils.sum(ins, c => c.value);
+    const paid = Utils.sum(ins.filter(c => c.status === 'pagada'), c => c.value);
+    const pendingIns = ins.filter(c => c.status !== 'pagada');
+    const pending = Utils.sum(pendingIns, c => c.value);
+    const capitalPending = Utils.sum(pendingIns, c => c.capital);
+    const interestPending = Utils.sum(pendingIns, c => c.interest);
+    return { total, paid, pending, paidCount, totalCount, capitalPending, interestPending };
+  },
+
+  /* --- USO DE CUPO DE UNA TARJETA --- */
+  cardUsage(card) {
+    if (card.type !== 'credito') return { used: 0, available: 0, total: 0, pct: 0 };
+    const total = Number(card.cupoTotal) || 0;
+    // Capital pendiente de compras a crédito en esa tarjeta
+    const used = Utils.sum(
+      Repos.expenses.where(e => e.cardId === card.id && e.method === 'credito')
+        .map(e => this.expenseTotals(this.refreshInstallmentStatus(e)).capitalPending)
+    );
+    const available = Math.max(0, total - used);
+    const pct = total > 0 ? (used / total) * 100 : 0;
+    return { used, available, total, pct };
+  },
+
+  /* --- TODAS LAS CUOTAS PENDIENTES (aplanadas) --- */
+  pendingInstallments() {
+    const out = [];
+    Repos.expenses.where(e => e.method === 'credito' && e.type !== 'ingreso').forEach(e => {
+      this.refreshInstallmentStatus(e);
+      (e.installments || []).forEach(c => {
+        if (c.status !== 'pagada') out.push({ expense: e, cuota: c });
+      });
+    });
+    // También compras a débito/efectivo marcadas como pendientes
+    return out.sort((a, b) => a.cuota.dueDate.localeCompare(b.cuota.dueDate));
+  },
+
+  /* --- TOTAL DE DEUDA --- */
+  totalDebt() {
+    return Utils.sum(
+      Repos.expenses.where(e => e.method === 'credito' && e.type !== 'ingreso')
+        .map(e => this.expenseTotals(this.refreshInstallmentStatus(e)).pending)
+    );
+  },
+
+  /* --- TOTAL A PAGAR HASTA UNA FECHA (para saldar pendientes) --- */
+  totalDueUntil(dateStr) {
+    return Utils.sum(this.pendingInstallments().filter(p => p.cuota.dueDate <= dateStr).map(p => p.cuota.value));
+  },
+
+  /* --- INGRESOS / EGRESOS DE UN MES (clave YYYY-MM) --- */
+  monthFlow(monthKey) {
+    const exps = Repos.expenses.where(e => Utils.monthKey(e.date) === monthKey);
+    const income = Utils.sum(exps.filter(e => e.type === 'ingreso'), e => e.amount);
+    const outflow = Utils.sum(exps.filter(e => e.type !== 'ingreso'), e => e.amount);
+    return { income, outflow, net: income - outflow };
+  },
+
+  /* --- BALANCE GLOBAL (saldo disponible aproximado) --- */
+  balance() {
+    const income = Utils.sum(Repos.expenses.where(e => e.type === 'ingreso'), e => e.amount);
+    // egresos a débito/efectivo restan de inmediato; crédito resta lo ya pagado
+    const exps = Repos.expenses.where(e => e.type !== 'ingreso');
+    let spent = 0;
+    exps.forEach(e => {
+      if (e.method === 'credito') spent += this.expenseTotals(this.refreshInstallmentStatus(e)).paid;
+      else spent += e.amount;
+    });
+    return income - spent;
+  },
+
+  /* --- PRÓXIMO PAGO / PRÓXIMO CORTE --- */
+  nextPayment() {
+    const p = this.pendingInstallments()[0];
+    return p ? { date: p.cuota.dueDate, amount: p.cuota.value, label: p.expense.entity } : null;
+  },
+  nextCut() {
+    const today = Utils.todayStr();
+    const cuts = Repos.cards.where(c => c.type === 'credito').map(c => {
+      const dates = this.billingDates(c, today);
+      return { date: dates.cut, card: c };
+    }).filter(x => x.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+    return cuts[0] || null;
+  },
+
+  /* --- PRESUPUESTO CONSUMIDO (mes actual) --- */
+  budgetStatus(budget, monthKey) {
+    const spent = Utils.sum(
+      Repos.expenses.where(e => e.type !== 'ingreso' && e.category === budget.category && Utils.monthKey(e.date) === monthKey),
+      e => e.amount
+    );
+    const pct = budget.limit > 0 ? (spent / budget.limit) * 100 : 0;
+    return { spent, pct, remaining: budget.limit - spent };
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 9) MÓDULO: TARJETAS (crédito / débito) con diseño visual
+ * ---------------------------------------------------------------- */
+const CARD_THEMES = {
+  indigo:  ['#4f46e5', '#7c3aed'],
+  ocean:   ['#0ea5e9', '#2563eb'],
+  emerald: ['#059669', '#0d9488'],
+  sunset:  ['#f97316', '#db2777'],
+  rose:    ['#e11d48', '#9f1239'],
+  graphite:['#334155', '#0f172a'],
+  gold:    ['#b45309', '#92400e'],
+  purple:  ['#7e22ce', '#4338ca'],
+};
+const BRAND_ICON = { visa: 'fa-cc-visa', mastercard: 'fa-cc-mastercard', amex: 'fa-cc-amex' };
+
+const Cards = {
+  bankCardHTML(card, { big = true } = {}) {
+    const [c1, c2] = CARD_THEMES[card.color] || CARD_THEMES.indigo;
+    const usage = Engine.cardUsage(card);
+    const brandIcon = BRAND_ICON[card.brand] || 'fa-credit-card';
+    const isCredit = card.type === 'credito';
+    return `
+      <div class="bank-card card-stripe ${big ? '' : 'text-sm'}" style="background:linear-gradient(135deg,${c1},${c2})" data-card="${card.id}">
+        <div class="relative z-10 h-full p-5 flex flex-col justify-between">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-xs/none uppercase tracking-widest opacity-80">${Utils.escape(card.bank)}</p>
+              <p class="font-semibold mt-1">${Utils.escape(card.name || '')}</p>
+            </div>
+            <i class="fa-brands ${brandIcon} text-3xl opacity-90"></i>
+          </div>
+          <div class="chip"></div>
+          <div>
+            <p class="font-mono tracking-[0.25em] text-lg">•••• •••• •••• ${Utils.escape(card.last4 || '0000')}</p>
+            <div class="flex items-end justify-between mt-3 text-xs">
+              <div>
+                <p class="opacity-70">${isCredit ? 'Corte' : 'Tipo'}</p>
+                <p class="font-semibold">${isCredit ? 'día ' + (card.cutDay || '—') : 'Débito'}</p>
+              </div>
+              <div>
+                <p class="opacity-70">${isCredit ? 'Pago' : 'Estado'}</p>
+                <p class="font-semibold">${isCredit ? 'día ' + (card.payDay || '—') : (card.status || 'activa')}</p>
+              </div>
+              <div class="text-right">
+                <p class="opacity-70">${isCredit ? 'Cupo usado' : 'Banco'}</p>
+                <p class="font-semibold">${isCredit ? Utils.pct(usage.pct) : ''}</p>
+              </div>
+            </div>
+            ${isCredit ? `<div class="mt-2 h-1.5 w-full rounded-full bg-white/25 overflow-hidden"><div class="h-full rounded-full bg-white" style="width:${Utils.clamp(usage.pct,0,100)}%"></div></div>` : ''}
+          </div>
+        </div>
+      </div>`;
+  },
+
+  render() {
+    const cards = Repos.cards.all();
+    const credit = cards.filter(c => c.type === 'credito');
+    const totalCupo = Utils.sum(credit, c => Number(c.cupoTotal) || 0);
+    const used = Utils.sum(credit.map(c => Engine.cardUsage(c).used));
+    return `
+      <div class="view space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold">Mis tarjetas</h2>
+            <p class="text-sm text-slate-500">Gestiona tus tarjetas de crédito y débito, cortes y fechas de pago.</p>
+          </div>
+          <button onclick="Cards.openForm()" class="inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 shadow-soft"><i class="fa-solid fa-plus"></i> Agregar tarjeta</button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          ${UI.kpi({ label: 'Tarjetas', value: cards.length, icon: 'fa-credit-card', color: 'brand' })}
+          ${UI.kpi({ label: 'Cupo total (crédito)', value: Utils.money(totalCupo), icon: 'fa-gauge-high', color: 'emerald' })}
+          ${UI.kpi({ label: 'Cupo utilizado', value: Utils.money(used), icon: 'fa-fire', color: 'rose', sub: totalCupo ? Utils.pct(used/totalCupo*100) + ' del total' : '' })}
+        </div>
+
+        ${cards.length === 0
+          ? UI.empty('Aún no tienes tarjetas registradas.', 'fa-credit-card', `<button onclick="Cards.openForm()" class="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold">Agregar mi primera tarjeta</button>`)
+          : `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              ${cards.map(c => `
+                <div class="space-y-3">
+                  <div class="cursor-pointer" onclick="Cards.openDetail('${c.id}')">${this.bankCardHTML(c)}</div>
+                  <div class="flex items-center justify-between px-1">
+                    <span class="text-xs text-slate-500">${c.type === 'credito' ? 'Crédito' : 'Débito'} · ${Utils.escape(c.brand || '')}</span>
+                    <div class="flex gap-1">
+                      <button onclick="Cards.openForm('${c.id}')" class="w-8 h-8 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"><i class="fa-solid fa-pen text-xs"></i></button>
+                      <button onclick="Cards.remove('${c.id}')" class="w-8 h-8 grid place-items-center rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-500"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>
+                  </div>
+                </div>`).join('')}
+            </div>`}
+      </div>`;
+  },
+
+  openForm(id = null) {
+    const card = id ? Repos.cards.find(id) : {};
+    const isEdit = !!id;
+    const colorOpts = Object.keys(CARD_THEMES).map(k => `<button type="button" data-color="${k}" class="color-swatch w-9 h-9 rounded-lg border-2 ${card.color === k ? 'border-brand-500 scale-110' : 'border-transparent'}" style="background:linear-gradient(135deg,${CARD_THEMES[k][0]},${CARD_THEMES[k][1]})"></button>`).join('');
+    UI.modal({
+      title: isEdit ? 'Editar tarjeta' : 'Nueva tarjeta',
+      size: 'max-w-2xl',
+      body: `
+        <form id="card-form" class="space-y-4">
+          <div class="grid sm:grid-cols-2 gap-4">
+            ${UI.field('Banco', UI.select('bank', CONFIG.banks, card.bank || 'Bancolombia'))}
+            ${UI.field('Nombre / alias', UI.input('name', { value: card.name || '', placeholder: 'Ej: Visa Personal', required: true }))}
+            ${UI.field('Tipo', UI.select('type', [{value:'credito',label:'Crédito'},{value:'debito',label:'Débito'}], card.type || 'credito', 'onchange="Cards.toggleCreditFields(this.form)"'))}
+            ${UI.field('Franquicia', UI.select('brand', [{value:'visa',label:'Visa'},{value:'mastercard',label:'Mastercard'},{value:'amex',label:'Amex'}], card.brand || 'visa'))}
+            ${UI.field('Últimos 4 dígitos', UI.input('last4', { value: card.last4 || '', placeholder: '1234', extra: 'maxlength=4 inputmode=numeric' }))}
+            ${UI.field('Estado', UI.select('status', ['activa','bloqueada','vencida'], card.status || 'activa'))}
+          </div>
+          <div class="credit-fields grid sm:grid-cols-3 gap-4 ${card.type === 'debito' ? 'hidden' : ''}">
+            ${UI.field('Cupo total', UI.input('cupoTotal', { type: 'number', value: card.cupoTotal || '', placeholder: '0', min: 0 }))}
+            ${UI.field('Día de corte', UI.input('cutDay', { type: 'number', value: card.cutDay || '', placeholder: '1-31', min: 1, extra: 'max=31' }))}
+            ${UI.field('Día de pago', UI.input('payDay', { type: 'number', value: card.payDay || '', placeholder: '1-31', min: 1, extra: 'max=31' }))}
+          </div>
+          <div>
+            <span class="text-sm font-medium">Color de la tarjeta</span>
+            <div class="mt-2 flex flex-wrap gap-2" id="color-picker">${colorOpts}</div>
+            <input type="hidden" name="color" value="${card.color || 'indigo'}" />
+          </div>
+          ${UI.field('Notas', UI.textarea('notes', card.notes || '', 'Notas opcionales...'))}
+        </form>`,
+      footer: `
+        <button data-close class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-medium">Cancelar</button>
+        <button onclick="Cards.save('${id || ''}')" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold">${isEdit ? 'Guardar cambios' : 'Crear tarjeta'}</button>`,
+      onMount(wrap) {
+        $('#color-picker', wrap).addEventListener('click', (e) => {
+          const b = e.target.closest('[data-color]'); if (!b) return;
+          $$('.color-swatch', wrap).forEach(s => s.classList.remove('border-brand-500', 'scale-110'));
+          b.classList.add('border-brand-500', 'scale-110');
+          $('input[name=color]', wrap).value = b.dataset.color;
+        });
+      },
+    });
+  },
+
+  toggleCreditFields(form) {
+    const isCredit = form.type.value === 'credito';
+    form.closest('form').querySelector('.credit-fields')?.classList.toggle('hidden', !isCredit);
+  },
+
+  save(id) {
+    const f = $('#card-form');
+    const data = {
+      bank: f.bank.value, name: f.name.value.trim(), type: f.type.value, brand: f.brand.value,
+      last4: f.last4.value.replace(/\D/g, '').slice(-4), status: f.status.value,
+      cupoTotal: Number(f.cupoTotal.value) || 0, cutDay: Number(f.cutDay.value) || null,
+      payDay: Number(f.payDay.value) || null, color: f.color.value, notes: f.notes.value.trim(),
+    };
+    if (!data.name) return Utils.toast('El nombre es obligatorio', 'error');
+    if (id) { Repos.cards.update(id, data); Utils.toast('Tarjeta actualizada'); }
+    else { Repos.cards.insert(data); Utils.toast('Tarjeta creada'); }
+    UI.closeModal(); Router.go('cards');
+  },
+
+  async remove(id) {
+    const c = Repos.cards.find(id);
+    if (await Utils.confirm('¿Eliminar tarjeta?', `Se eliminará "${c?.name}". Los gastos asociados se conservarán.`, 'Eliminar')) {
+      Repos.cards.remove(id); Utils.toast('Tarjeta eliminada'); Router.go('cards');
+    }
+  },
+
+  openDetail(id) {
+    const c = Repos.cards.find(id); if (!c) return;
+    const usage = Engine.cardUsage(c);
+    const movements = Repos.expenses.where(e => e.cardId === id).sort((a, b) => b.date.localeCompare(a.date));
+    const dates = c.type === 'credito' ? Engine.billingDates(c, Utils.todayStr()) : null;
+    UI.modal({
+      title: `${c.name} · ${c.bank}`,
+      size: 'max-w-2xl',
+      body: `
+        <div class="grid sm:grid-cols-2 gap-5 items-start">
+          <div>${this.bankCardHTML(c)}</div>
+          <div class="space-y-3 text-sm">
+            ${c.type === 'credito' ? `
+              <div class="flex justify-between"><span class="text-slate-500">Cupo total</span><b>${Utils.money(usage.total)}</b></div>
+              <div class="flex justify-between"><span class="text-slate-500">Cupo usado</span><b class="text-rose-500">${Utils.money(usage.used)}</b></div>
+              <div class="flex justify-between"><span class="text-slate-500">Cupo disponible</span><b class="text-emerald-500">${Utils.money(usage.available)}</b></div>
+              ${UI.progress(usage.pct, usage.pct > 80 ? 'rose' : 'brand')}
+              <div class="flex justify-between pt-2"><span class="text-slate-500">Próximo corte</span><b>${Utils.fmtDate(dates.cut)}</b></div>
+              <div class="flex justify-between"><span class="text-slate-500">Próximo pago</span><b>${Utils.fmtDate(dates.firstPay)}</b></div>
+            ` : `<div class="flex justify-between"><span class="text-slate-500">Tipo</span><b>Débito</b></div>
+                 <div class="flex justify-between"><span class="text-slate-500">Estado</span><b>${c.status}</b></div>`}
+            ${c.notes ? `<p class="text-slate-500 pt-2 border-t border-slate-200 dark:border-slate-800">${Utils.escape(c.notes)}</p>` : ''}
+          </div>
+        </div>
+        <h4 class="font-semibold mt-6 mb-2">Movimientos (${movements.length})</h4>
+        <div class="max-h-64 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
+          ${movements.length ? movements.map(e => `
+            <div class="flex items-center justify-between px-4 py-2.5 text-sm">
+              <div><p class="font-medium">${Utils.escape(e.entity)}</p><p class="text-xs text-slate-500">${Utils.fmtDate(e.date)} · ${e.method}${e.installmentsCount > 1 ? ' · ' + e.installmentsCount + ' cuotas' : ''}</p></div>
+              <b class="${e.type === 'ingreso' ? 'text-emerald-500' : ''}">${e.type === 'ingreso' ? '+' : ''}${Utils.money(e.amount)}</b>
+            </div>`).join('') : `<p class="px-4 py-6 text-center text-slate-400 text-sm">Sin movimientos</p>`}
+        </div>`,
+      footer: `<button onclick="Cards.openForm('${id}')" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-medium">Editar</button>
+               <button data-close class="px-4 py-2 rounded-xl bg-brand-600 text-white font-semibold">Cerrar</button>`,
+    });
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 10) MÓDULO: TASAS DE INTERÉS (global, por mes)
+ * ---------------------------------------------------------------- */
+const Rates = {
+  render() {
+    const rates = Repos.rates.all().sort((a, b) => (b.year - a.year) || (b.month - a.month));
+    const byYear = Utils.groupBy(rates, r => r.year);
+    const years = Object.keys(byYear).sort((a, b) => b - a);
+    return `
+      <div class="view space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold">Tasas de interés mensuales</h2>
+            <p class="text-sm text-slate-500">Define la tasa de cada mes. Al registrar una compra se usa la tasa del mes de la compra, nunca una actual.</p>
+          </div>
+          <button onclick="Rates.openForm()" class="inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 shadow-soft"><i class="fa-solid fa-plus"></i> Agregar tasa</button>
+        </div>
+
+        ${rates.length === 0 ? UI.empty('No has registrado tasas. Agrega la tasa del mes para calcular intereses.', 'fa-percent',
+          `<button onclick="Rates.seedYear()" class="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold">Crear 12 meses del año actual</button>`) :
+        years.map(y => `
+          <div class="surface rounded-2xl p-5 shadow-soft">
+            <h3 class="font-bold mb-3">${y}</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              ${byYear[y].sort((a, b) => a.month - b.month).map(r => `
+                <div class="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2.5">
+                  <div>
+                    <p class="text-xs text-slate-500">${Utils.monthName(r.month)}</p>
+                    <p class="font-bold text-brand-600">${Number(r.rate).toFixed(2)}%</p>
+                  </div>
+                  <div class="flex gap-1">
+                    <button onclick="Rates.openForm('${r.id}')" class="w-7 h-7 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"><i class="fa-solid fa-pen text-xs"></i></button>
+                    <button onclick="Rates.remove('${r.id}')" class="w-7 h-7 grid place-items-center rounded-lg hover:bg-rose-50 text-rose-500"><i class="fa-solid fa-trash text-xs"></i></button>
+                  </div>
+                </div>`).join('')}
+            </div>
+          </div>`).join('')}
+      </div>`;
+  },
+
+  openForm(id = null) {
+    const r = id ? Repos.rates.find(id) : { year: new Date().getFullYear(), month: new Date().getMonth() + 1, rate: '' };
+    UI.modal({
+      title: id ? 'Editar tasa' : 'Nueva tasa mensual',
+      body: `
+        <form id="rate-form" class="space-y-4">
+          <div class="grid grid-cols-3 gap-4">
+            ${UI.field('Año', UI.input('year', { type: 'number', value: r.year, min: 2000, required: true }))}
+            ${UI.field('Mes', UI.select('month', Array.from({length:12}, (_,i)=>({value:i+1,label:Utils.monthName(i+1)})), r.month))}
+            ${UI.field('Tasa % mensual', UI.input('rate', { type: 'number', value: r.rate, step: '0.01', placeholder: '2.10', required: true }))}
+          </div>
+        </form>`,
+      footer: `<button data-close class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-medium">Cancelar</button>
+               <button onclick="Rates.save('${id || ''}')" class="px-4 py-2 rounded-xl bg-brand-600 text-white font-semibold">Guardar</button>`,
+    });
+  },
+
+  save(id) {
+    const f = $('#rate-form');
+    const year = Number(f.year.value), month = Number(f.month.value), rate = Number(f.rate.value);
+    if (!year || !rate && rate !== 0) return Utils.toast('Datos incompletos', 'error');
+    // Evitar duplicados año/mes
+    const dup = Repos.rates.all().find(r => r.year === year && r.month === month && r.id !== id);
+    if (dup) Repos.rates.update(dup.id, { rate });
+    else if (id) Repos.rates.update(id, { year, month, rate });
+    else Repos.rates.insert({ year, month, rate });
+    Utils.toast('Tasa guardada'); UI.closeModal(); Router.go('rates');
+  },
+
+  async remove(id) {
+    if (await Utils.confirm('¿Eliminar tasa?', '', 'Eliminar')) { Repos.rates.remove(id); Router.go('rates'); }
+  },
+
+  seedYear() {
+    const y = new Date().getFullYear();
+    for (let m = 1; m <= 12; m++) Repos.rates.insert({ year: y, month: m, rate: 2.0 });
+    Utils.toast('Año creado, ajusta cada mes'); Router.go('rates');
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 11) MÓDULO: GASTOS / COMPRAS (con motor de cuotas)
+ * ---------------------------------------------------------------- */
+const Expenses = {
+  statusColor: { pagado: 'emerald', pendiente: 'amber', vencido: 'rose', activo: 'brand' },
+
+  render() {
+    let list = Repos.expenses.all().map(e => Engine.refreshInstallmentStatus(e));
+    list.sort((a, b) => (b.date + (b.time||'')).localeCompare(a.date + (a.time||'')));
+    const totalEgreso = Utils.sum(list.filter(e => e.type !== 'ingreso'), e => e.amount);
+    const totalIngreso = Utils.sum(list.filter(e => e.type === 'ingreso'), e => e.amount);
+
+    return `
+      <div class="view space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold">Gastos y movimientos</h2>
+            <p class="text-sm text-slate-500">Registra compras, define cuotas y deja que el sistema calcule intereses y fechas de pago.</p>
+          </div>
+          <button onclick="Expenses.openForm()" class="inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 shadow-soft"><i class="fa-solid fa-plus"></i> Registrar gasto</button>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          ${UI.kpi({ label: 'Movimientos', value: list.length, icon: 'fa-receipt', color: 'brand' })}
+          ${UI.kpi({ label: 'Total egresos', value: Utils.money(totalEgreso), icon: 'fa-arrow-trend-down', color: 'rose' })}
+          ${UI.kpi({ label: 'Total ingresos', value: Utils.money(totalIngreso), icon: 'fa-arrow-trend-up', color: 'emerald' })}
+          ${UI.kpi({ label: 'Deuda en curso', value: Utils.money(Engine.totalDebt()), icon: 'fa-hand-holding-dollar', color: 'amber' })}
+        </div>
+
+        <!-- Filtros -->
+        <div class="surface rounded-2xl p-4 flex flex-wrap gap-3 items-center">
+          <input id="exp-filter-text" oninput="Expenses.applyFilters()" placeholder="Buscar entidad, descripción..." class="flex-1 min-w-[180px] rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none" />
+          <select id="exp-filter-method" onchange="Expenses.applyFilters()" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+            <option value="">Todos los métodos</option><option value="credito">Crédito</option><option value="debito">Débito</option><option value="efectivo">Efectivo</option>
+          </select>
+          <select id="exp-filter-cat" onchange="Expenses.applyFilters()" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+            <option value="">Todas las categorías</option>${CONFIG.categories.map(c => `<option value="${c}">${c}</option>`).join('')}
+          </select>
+        </div>
+
+        <div id="exp-list" class="space-y-3"></div>
+      </div>`;
+  },
+
+  applyFilters() {
+    const text = ($('#exp-filter-text')?.value || '').toLowerCase();
+    const method = $('#exp-filter-method')?.value || '';
+    const cat = $('#exp-filter-cat')?.value || '';
+    let list = Repos.expenses.all().map(e => Engine.refreshInstallmentStatus(e));
+    list = list.filter(e =>
+      (!method || e.method === method) &&
+      (!cat || e.category === cat) &&
+      (!text || (e.entity + ' ' + (e.description||'') + ' ' + (e.tags||'') + ' ' + (e.category||'')).toLowerCase().includes(text))
+    ).sort((a, b) => (b.date + (b.time||'')).localeCompare(a.date + (a.time||'')));
+
+    const wrap = $('#exp-list'); if (!wrap) return;
+    if (!list.length) { wrap.innerHTML = UI.empty('No hay movimientos que coincidan.', 'fa-receipt'); return; }
+    wrap.innerHTML = list.map(e => this.rowHTML(e)).join('');
+  },
+
+  rowHTML(e) {
+    const card = e.cardId ? Repos.cards.find(e.cardId) : null;
+    const t = Engine.expenseTotals(e);
+    const isCredit = e.method === 'credito';
+    const income = e.type === 'ingreso';
+    const stColor = income ? 'emerald' : (isCredit ? (t.pending <= 0 ? 'emerald' : (e.installments?.some(c=>c.status==='vencida') ? 'rose' : 'amber')) : (e.status === 'pagado' ? 'emerald' : 'amber'));
+    const stText = income ? 'Ingreso' : (isCredit ? `${t.paidCount}/${t.totalCount} cuotas` : (e.status === 'pagado' ? 'Pagado' : 'Pendiente'));
+    const methodIcon = { credito: 'fa-credit-card', debito: 'fa-money-check', efectivo: 'fa-money-bill-wave' }[e.method] || 'fa-receipt';
+    return `
+      <div class="surface rounded-2xl p-4 shadow-soft hover:shadow-card transition cursor-pointer" onclick="Expenses.openDetail('${e.id}')">
+        <div class="flex items-center gap-4">
+          <div class="w-11 h-11 rounded-xl grid place-items-center ${income ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}"><i class="fa-solid ${income ? 'fa-arrow-down' : methodIcon}"></i></div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="font-semibold truncate">${Utils.escape(e.entity)}</p>
+              ${UI.badge(stText, stColor)}
+              ${e.category ? UI.badge(e.category, 'slate') : ''}
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">
+              ${Utils.fmtDate(e.date)}${e.time ? ' · ' + e.time : ''}
+              ${card ? ' · ' + Utils.escape(card.name) : ''}
+              ${isCredit && e.installmentsCount > 1 ? ` · ${e.installmentsCount} cuotas @ ${Number(e.interestRate||0).toFixed(2)}%` : ''}
+              ${e.receipt ? ' · <i class="fa-solid fa-paperclip"></i>' : ''}
+            </p>
+            ${isCredit && t.totalCount > 1 ? `<div class="mt-2 max-w-xs">${UI.progress(t.paidCount/t.totalCount*100, 'brand')}</div>` : ''}
+          </div>
+          <div class="text-right">
+            <p class="font-extrabold ${income ? 'text-emerald-500' : ''}">${income ? '+' : ''}${Utils.money(e.amount)}</p>
+            ${isCredit && t.pending > 0 ? `<p class="text-xs text-amber-500">Falta ${Utils.money(t.pending)}</p>` : ''}
+          </div>
+        </div>
+      </div>`;
+  },
+
+  /* ---------- FORMULARIO ---------- */
+  openForm(id = null) {
+    const e = id ? Repos.expenses.find(id) : {
+      type: 'egreso', date: Utils.todayStr(), time: new Date().toTimeString().slice(0,5),
+      method: 'credito', installmentsCount: 1, status: 'pendiente',
+    };
+    const cards = Repos.cards.all();
+    const creditCards = cards.filter(c => c.type === 'credito');
+    const cardOptions = [{ value: '', label: '— Selecciona tarjeta —' }, ...cards.map(c => ({ value: c.id, label: `${c.name} · ${c.bank} (${c.type})` }))];
+
+    UI.modal({
+      title: id ? 'Editar gasto' : 'Registrar gasto',
+      size: 'max-w-3xl',
+      body: `
+        <form id="exp-form" class="space-y-4" oninput="Expenses.recalc()">
+          <div class="grid sm:grid-cols-2 gap-4">
+            ${UI.field('Tipo', UI.select('type', [{value:'egreso',label:'Egreso (gasto)'},{value:'ingreso',label:'Ingreso'}], e.type))}
+            ${UI.field('Entidad / Comercio', UI.input('entity', { value: e.entity || '', placeholder: 'Ej: Éxito, Netflix...', required: true }))}
+            ${UI.field('Valor de la compra', UI.input('amount', { type: 'number', value: e.amount || '', placeholder: '0', min: 0, required: true, step: '0.01' }))}
+            ${UI.field('Categoría', UI.select('category', CONFIG.categories, e.category || 'Otros'))}
+            ${UI.field('Subcategoría', UI.input('subcategory', { value: e.subcategory || '', placeholder: 'Opcional' }))}
+            ${UI.field('Etiquetas', UI.input('tags', { value: e.tags || '', placeholder: 'separadas, por, comas' }))}
+            ${UI.field('Fecha', UI.input('date', { type: 'date', value: e.date || Utils.todayStr(), required: true }))}
+            ${UI.field('Hora', UI.input('time', { type: 'time', value: e.time || '' }))}
+            ${UI.field('Ciudad', UI.input('city', { value: e.city || '', placeholder: 'Opcional' }))}
+            ${UI.field('Método de pago', UI.select('method', [{value:'credito',label:'Tarjeta de crédito'},{value:'debito',label:'Tarjeta de débito'},{value:'efectivo',label:'Efectivo'}], e.method, 'onchange="Expenses.onMethodChange(this.form)"'))}
+            ${UI.field('Tarjeta asociada', UI.select('cardId', cardOptions, e.cardId || '', 'onchange="Expenses.recalc()"'))}
+            <div class="credit-only ${e.method !== 'credito' ? 'hidden' : ''}">${UI.field('Número de cuotas', UI.input('installmentsCount', { type: 'number', value: e.installmentsCount || 1, min: 1, extra: 'max=60' }))}</div>
+          </div>
+
+          <!-- Panel de cálculo en vivo -->
+          <div id="calc-panel" class="credit-only ${e.method !== 'credito' ? 'hidden' : ''} rounded-2xl border border-brand-200 dark:border-brand-500/30 bg-brand-50 dark:bg-brand-500/10 p-4"></div>
+
+          <div class="grid sm:grid-cols-2 gap-4">
+            ${UI.field('Garantía hasta', UI.input('warranty', { type: 'date', value: e.warranty || '' }), 'Opcional, para alertas')}
+            <label class="block"><span class="text-sm font-medium">Comprobante (imagen)</span>
+              <input type="file" name="receiptFile" accept="image/*" onchange="Expenses.onReceipt(this)" class="mt-1 w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:text-white file:px-3 file:py-2 file:font-medium"/>
+              <input type="hidden" name="receipt" value="${e.receipt || ''}" />
+              <div id="receipt-preview" class="mt-2">${e.receipt ? `<img src="${e.receipt}" class="h-20 rounded-lg border border-slate-200"/>` : ''}</div>
+            </label>
+          </div>
+          ${UI.field('Descripción / Notas', UI.textarea('description', e.description || '', 'Detalle del gasto...'))}
+          <div class="non-credit ${e.method === 'credito' ? 'hidden' : ''}">
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="paidNow" ${e.status === 'pagado' ? 'checked' : ''} class="rounded"/> Marcar como pagado</label>
+          </div>
+        </form>`,
+      footer: `<button data-close class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-medium">Cancelar</button>
+               <button onclick="Expenses.save('${id || ''}')" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold">${id ? 'Guardar cambios' : 'Registrar'}</button>`,
+      onMount: () => this.recalc(),
+    });
+    if (!creditCards.length && e.method === 'credito') {
+      // aviso suave
+      setTimeout(() => { const p = $('#calc-panel'); if (p && !creditCards.length) p.innerHTML = `<p class="text-sm text-amber-600"><i class="fa-solid fa-triangle-exclamation"></i> No tienes tarjetas de crédito. <button type="button" class="underline" onclick="UI.closeModal();Router.go('cards')">Agrega una</button> para calcular cuotas y fechas.</p>`; }, 0);
+    }
+  },
+
+  onMethodChange(form) {
+    const isCredit = form.method.value === 'credito';
+    $$('.credit-only', form).forEach(el => el.classList.toggle('hidden', !isCredit));
+    $$('.non-credit', form).forEach(el => el.classList.toggle('hidden', isCredit));
+    this.recalc();
+  },
+
+  onReceipt(input) {
+    const file = input.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const url = ev.target.result;
+      input.form.receipt.value = url;
+      $('#receipt-preview').innerHTML = `<img src="${url}" class="h-20 rounded-lg border border-slate-200"/>`;
+    };
+    reader.readAsDataURL(file);
+  },
+
+  // Recalcula y muestra el panel de cuotas/intereses en vivo
+  recalc() {
+    const f = $('#exp-form'); if (!f) return;
+    const panel = $('#calc-panel'); if (!panel) return;
+    if (f.method.value !== 'credito') { panel.classList.add('hidden'); return; }
+    panel.classList.remove('hidden');
+
+    const amount = Number(f.amount.value) || 0;
+    const n = Math.max(1, parseInt(f.installmentsCount.value) || 1);
+    const date = f.date.value || Utils.todayStr();
+    const card = f.cardId.value ? Repos.cards.find(f.cardId.value) : null;
+    const rate = Engine.rateForDate(date);
+    const rows = Engine.amortize(amount, rate, n);
+    const totalInterest = Utils.sum(rows, r => r.interest);
+    const totalToPay = amount + totalInterest;
+    const cuotaConInteres = rows[0]?.value || 0;
+    const cuotaSinInteres = n ? Math.round(amount / n) : 0;
+    const dates = card ? Engine.billingDates(card, date) : null;
+
+    panel.innerHTML = `
+      <div class="flex items-center justify-between mb-3">
+        <p class="font-semibold text-brand-700 dark:text-brand-300"><i class="fa-solid fa-calculator"></i> Cálculo automático</p>
+        <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-brand-600 text-white">Tasa ${Utils.monthName(Utils.parseDate(date).getMonth()+1)}: ${rate.toFixed(2)}%</span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+        <div><p class="text-slate-500 text-xs">Cuota sin interés</p><p class="font-bold">${Utils.money(cuotaSinInteres)}</p></div>
+        <div><p class="text-slate-500 text-xs">Cuota con interés</p><p class="font-bold text-brand-600">${Utils.money(cuotaConInteres)}</p></div>
+        <div><p class="text-slate-500 text-xs">Interés total</p><p class="font-bold text-rose-500">${Utils.money(totalInterest)}</p></div>
+        <div><p class="text-slate-500 text-xs">Total a pagar</p><p class="font-bold">${Utils.money(totalToPay)}</p></div>
+      </div>
+      ${dates ? `<div class="mt-3 pt-3 border-t border-brand-200 dark:border-brand-500/30 grid grid-cols-2 gap-3 text-sm">
+        <div><p class="text-slate-500 text-xs"><i class="fa-solid fa-scissors"></i> Fecha de corte</p><p class="font-bold">${Utils.fmtDate(dates.cut)}</p></div>
+        <div><p class="text-slate-500 text-xs"><i class="fa-regular fa-calendar-check"></i> 1ª fecha límite de pago</p><p class="font-bold text-emerald-600">${Utils.fmtDate(dates.firstPay)}</p></div>
+      </div>` : `<p class="mt-2 text-xs text-slate-500">Selecciona una tarjeta para calcular fecha de corte y de pago automáticamente.</p>`}`;
+  },
+
+  save(id) {
+    const f = $('#exp-form');
+    const amount = Number(f.amount.value) || 0;
+    if (!f.entity.value.trim() || amount <= 0) return Utils.toast('Entidad y valor son obligatorios', 'error');
+
+    const data = {
+      type: f.type.value, entity: f.entity.value.trim(), amount,
+      category: f.category.value, subcategory: f.subcategory.value.trim(), tags: f.tags.value.trim(),
+      date: f.date.value, time: f.time.value, city: f.city.value.trim(),
+      method: f.method.value, cardId: f.cardId.value || null,
+      installmentsCount: f.method.value === 'credito' ? Math.max(1, parseInt(f.installmentsCount.value) || 1) : 1,
+      warranty: f.warranty.value || null, receipt: f.receipt.value || null,
+      description: f.description.value.trim(),
+      status: (f.method.value !== 'credito' && f.paidNow?.checked) ? 'pagado' : 'pendiente',
+    };
+
+    if (data.type === 'ingreso') { data.method = data.method; data.installmentsCount = 1; }
+
+    // Motor: si es crédito, fija la tasa del mes y genera cuotas
+    if (data.method === 'credito' && data.type !== 'ingreso') {
+      data.interestRate = Engine.rateForDate(data.date);
+      const card = data.cardId ? Repos.cards.find(data.cardId) : null;
+      // Conservar pagos existentes si se edita
+      const prev = id ? Repos.expenses.find(id) : null;
+      data.installments = Engine.buildInstallments(data, card);
+      if (prev?.installments) {
+        prev.installments.forEach((c, i) => {
+          if (c.status === 'pagada' && data.installments[i]) {
+            data.installments[i].status = 'pagada';
+            data.installments[i].paymentDate = c.paymentDate;
+            data.installments[i].receipt = c.receipt;
+          }
+        });
+      }
+    } else { data.interestRate = 0; data.installments = null; }
+
+    if (id) { Repos.expenses.update(id, data); Utils.toast('Gasto actualizado'); }
+    else { Repos.expenses.insert(data); Utils.toast('Gasto registrado'); }
+    UI.closeModal(); Router.go(State.view === 'expenses' ? 'expenses' : State.view);
+  },
+
+  /* ---------- DETALLE + CUOTAS ---------- */
+  openDetail(id) {
+    const e = Engine.refreshInstallmentStatus(Repos.expenses.find(id)); if (!e) return;
+    const card = e.cardId ? Repos.cards.find(e.cardId) : null;
+    const t = Engine.expenseTotals(e);
+    const isCredit = e.method === 'credito' && e.installments;
+
+    const info = `
+      <div class="grid sm:grid-cols-2 gap-3 text-sm">
+        <div class="flex justify-between"><span class="text-slate-500">Valor</span><b>${Utils.money(e.amount)}</b></div>
+        <div class="flex justify-between"><span class="text-slate-500">Fecha</span><b>${Utils.fmtDate(e.date)} ${e.time||''}</b></div>
+        <div class="flex justify-between"><span class="text-slate-500">Método</span><b class="capitalize">${e.method}</b></div>
+        <div class="flex justify-between"><span class="text-slate-500">Tarjeta</span><b>${card ? Utils.escape(card.name) : '—'}</b></div>
+        <div class="flex justify-between"><span class="text-slate-500">Categoría</span><b>${Utils.escape(e.category||'—')}</b></div>
+        <div class="flex justify-between"><span class="text-slate-500">Ciudad</span><b>${Utils.escape(e.city||'—')}</b></div>
+        ${isCredit ? `<div class="flex justify-between"><span class="text-slate-500">Tasa aplicada</span><b>${Number(e.interestRate).toFixed(2)}%</b></div>
+        <div class="flex justify-between"><span class="text-slate-500">Total con interés</span><b>${Utils.money(t.total)}</b></div>
+        <div class="flex justify-between"><span class="text-slate-500">Pagado</span><b class="text-emerald-500">${Utils.money(t.paid)}</b></div>
+        <div class="flex justify-between"><span class="text-slate-500">Pendiente</span><b class="text-amber-500">${Utils.money(t.pending)}</b></div>` : ''}
+      </div>
+      ${e.description ? `<p class="mt-3 text-sm text-slate-500">${Utils.escape(e.description)}</p>` : ''}
+      ${e.warranty ? `<p class="mt-2 text-sm">${UI.badge('Garantía hasta ' + Utils.fmtDate(e.warranty), 'sky')}</p>` : ''}
+      ${e.receipt ? `<img src="${e.receipt}" class="mt-3 max-h-48 rounded-xl border border-slate-200 dark:border-slate-800"/>` : ''}`;
+
+    const cuotas = isCredit ? `
+      <h4 class="font-semibold mt-5 mb-2">Plan de cuotas <span class="text-slate-400 text-sm font-normal">(${t.paidCount}/${t.totalCount} pagadas)</span></h4>
+      <div class="mb-3">${UI.progress(t.totalCount ? t.paidCount/t.totalCount*100 : 0, 'brand')}</div>
+      <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
+        ${e.installments.map(c => {
+          const col = c.status === 'pagada' ? 'emerald' : (c.status === 'vencida' ? 'rose' : 'amber');
+          return `<div class="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-800 p-3">
+            <div class="w-9 h-9 rounded-full grid place-items-center bg-${col}-100 text-${col}-600 dark:bg-${col}-500/15 text-sm font-bold">${c.number}</div>
+            <div class="flex-1">
+              <p class="text-sm font-medium">${Utils.money(c.value)} <span class="text-xs text-slate-400">(cap ${Utils.money(c.capital)} + int ${Utils.money(c.interest)})</span></p>
+              <p class="text-xs text-slate-500">Vence ${Utils.fmtDate(c.dueDate)} ${UI.badge(c.status, col)}</p>
+            </div>
+            ${c.status === 'pagada'
+              ? `<button onclick="Expenses.toggleCuota('${e.id}',${c.number},false)" class="text-xs text-slate-400 hover:text-slate-600">Deshacer</button>`
+              : `<button onclick="Expenses.toggleCuota('${e.id}',${c.number},true)" class="text-xs font-semibold text-emerald-600 hover:underline"><i class="fa-solid fa-check"></i> Pagar</button>`}
+          </div>`;
+        }).join('')}
+      </div>` : '';
+
+    UI.modal({
+      title: e.entity,
+      size: 'max-w-2xl',
+      body: info + cuotas,
+      footer: `<button onclick="Expenses.remove('${id}')" class="px-4 py-2 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 font-medium"><i class="fa-solid fa-trash"></i> Eliminar</button>
+               <button onclick="Expenses.openForm('${id}')" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-medium">Editar</button>
+               <button data-close class="px-4 py-2 rounded-xl bg-brand-600 text-white font-semibold">Cerrar</button>`,
+    });
+  },
+
+  toggleCuota(expId, number, paid) {
+    const e = Repos.expenses.find(expId); if (!e || !e.installments) return;
+    const c = e.installments.find(x => x.number === number); if (!c) return;
+    c.status = paid ? 'pagada' : 'pendiente';
+    c.paymentDate = paid ? Utils.todayStr() : null;
+    Repos.expenses.update(expId, { installments: e.installments });
+    Utils.toast(paid ? `Cuota ${number} pagada` : `Cuota ${number} marcada pendiente`);
+    this.openDetail(expId);
+  },
+
+  async remove(id) {
+    if (await Utils.confirm('¿Eliminar movimiento?', 'Esta acción no se puede deshacer.', 'Eliminar')) {
+      Repos.expenses.remove(id); UI.closeModal(); Utils.toast('Movimiento eliminado'); Router.go(State.view);
+    }
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 12) MÓDULO: CENTRO DE PAGOS
+ * ---------------------------------------------------------------- */
+const Payments = {
+  render() {
+    const today = Utils.todayStr();
+    const weekEnd = Utils.iso(new Date(Date.now() + 7 * 86400000));
+    const monthEnd = Utils.iso(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0));
+    const pend = Engine.pendingInstallments();
+
+    const dueToday = pend.filter(p => p.cuota.dueDate === today);
+    const dueWeek = pend.filter(p => p.cuota.dueDate > today && p.cuota.dueDate <= weekEnd);
+    const dueMonth = pend.filter(p => p.cuota.dueDate <= monthEnd);
+    const overdue = pend.filter(p => p.cuota.dueDate < today);
+
+    const totalPending = Utils.sum(pend, p => p.cuota.value);
+    const totalOverdue = Utils.sum(overdue, p => p.cuota.value);
+    const nextPay = Engine.nextPayment();
+    const nextCut = Engine.nextCut();
+
+    const bucket = (title, items, color, icon) => `
+      <div class="surface rounded-2xl p-5 shadow-soft">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold flex items-center gap-2"><i class="fa-solid ${icon} text-${color}-500"></i> ${title}</h3>
+          <span class="text-sm font-bold">${Utils.money(Utils.sum(items, p => p.cuota.value))}</span>
+        </div>
+        ${items.length ? `<div class="space-y-2">${items.slice(0, 8).map(p => this.itemHTML(p)).join('')}</div>`
+          : `<p class="text-sm text-slate-400 py-3 text-center">Nada por aquí 🎉</p>`}
+      </div>`;
+
+    return `
+      <div class="view space-y-6">
+        <div>
+          <h2 class="text-xl font-bold">Centro de pagos</h2>
+          <p class="text-sm text-slate-500">Qué debes pagar y cuánto necesitas para quedar al día.</p>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          ${UI.kpi({ label: 'Total pendiente', value: Utils.money(totalPending), icon: 'fa-list-check', color: 'amber' })}
+          ${UI.kpi({ label: 'Vencido', value: Utils.money(totalOverdue), icon: 'fa-triangle-exclamation', color: 'rose' })}
+          ${UI.kpi({ label: 'Próximo pago', value: nextPay ? Utils.money(nextPay.amount) : '—', icon: 'fa-calendar-day', color: 'brand', sub: nextPay ? Utils.fmtDate(nextPay.date) : '' })}
+          ${UI.kpi({ label: 'Próximo corte', value: nextCut ? Utils.fmtDateShort(nextCut.date) : '—', icon: 'fa-scissors', color: 'sky', sub: nextCut ? nextCut.card.name : '' })}
+        </div>
+
+        <!-- Simulador de saldo total -->
+        <div class="surface rounded-2xl p-5 shadow-soft">
+          <h3 class="font-semibold mb-1"><i class="fa-solid fa-wand-magic-sparkles text-brand-500"></i> ¿Cuánto necesito para saldar todo?</h3>
+          <p class="text-sm text-slate-500 mb-3">Calcula el total de cuotas pendientes hasta una fecha (de pago o corte).</p>
+          <div class="flex flex-wrap items-end gap-3">
+            <label class="block"><span class="text-sm font-medium">Hasta la fecha</span>
+              <input id="settle-date" type="date" value="${monthEnd}" onchange="Payments.calcSettle()" class="mt-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2"/></label>
+            <div class="rounded-xl bg-brand-600 text-white px-5 py-3">
+              <p class="text-xs opacity-80">Total para quedar al día</p>
+              <p id="settle-amount" class="text-2xl font-extrabold">${Utils.money(Engine.totalDueUntil(monthEnd))}</p>
+            </div>
+          </div>
+        </div>
+
+        ${overdue.length ? bucket('Vencidas', overdue, 'rose', 'fa-triangle-exclamation') : ''}
+        <div class="grid lg:grid-cols-3 gap-5">
+          ${bucket('Hoy', dueToday, 'brand', 'fa-calendar-day')}
+          ${bucket('Esta semana', dueWeek, 'amber', 'fa-calendar-week')}
+          ${bucket('Este mes', dueMonth, 'sky', 'fa-calendar')}
+        </div>
+      </div>`;
+  },
+
+  itemHTML(p) {
+    const overdue = p.cuota.dueDate < Utils.todayStr();
+    return `<div class="flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2">
+      <div class="min-w-0">
+        <p class="text-sm font-medium truncate">${Utils.escape(p.expense.entity)} <span class="text-xs text-slate-400">#${p.cuota.number}</span></p>
+        <p class="text-xs ${overdue ? 'text-rose-500' : 'text-slate-500'}">${Utils.fmtDate(p.cuota.dueDate)}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <b class="text-sm">${Utils.money(p.cuota.value)}</b>
+        <button onclick="Expenses.toggleCuota('${p.expense.id}',${p.cuota.number},true)" class="text-xs font-semibold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg px-2 py-1"><i class="fa-solid fa-check"></i> Pagar</button>
+      </div>
+    </div>`;
+  },
+
+  calcSettle() {
+    const date = $('#settle-date').value;
+    $('#settle-amount').textContent = Utils.money(Engine.totalDueUntil(date));
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 13) MÓDULO: PRESUPUESTOS
+ * ---------------------------------------------------------------- */
+const Budgets = {
+  render() {
+    const mk = Utils.monthKey(Utils.todayStr());
+    const budgets = Repos.budgets.all();
+    return `
+      <div class="view space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 class="text-xl font-bold">Presupuestos</h2><p class="text-sm text-slate-500">Define un límite por categoría y recibe alertas al 80%, 90% y 100%.</p></div>
+          <button onclick="Budgets.openForm()" class="inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 shadow-soft"><i class="fa-solid fa-plus"></i> Nuevo presupuesto</button>
+        </div>
+        ${budgets.length === 0 ? UI.empty('Sin presupuestos definidos.', 'fa-wallet') :
+          `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          ${budgets.map(b => {
+            const s = Engine.budgetStatus(b, mk);
+            const color = s.pct >= 100 ? 'rose' : s.pct >= 80 ? 'amber' : 'emerald';
+            return `<div class="surface rounded-2xl p-5 shadow-soft">
+              <div class="flex items-center justify-between">
+                <h3 class="font-semibold">${Utils.escape(b.category)}</h3>
+                <div class="flex gap-1">
+                  <button onclick="Budgets.openForm('${b.id}')" class="w-7 h-7 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"><i class="fa-solid fa-pen text-xs"></i></button>
+                  <button onclick="Budgets.remove('${b.id}')" class="w-7 h-7 grid place-items-center rounded-lg hover:bg-rose-50 text-rose-500"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>
+              </div>
+              <p class="mt-2 text-2xl font-extrabold">${Utils.money(s.spent)} <span class="text-sm font-medium text-slate-400">/ ${Utils.money(b.limit)}</span></p>
+              <div class="mt-3">${UI.progress(s.pct, color)}</div>
+              <p class="mt-2 text-xs ${color === 'rose' ? 'text-rose-500' : 'text-slate-500'}">${Utils.pct(s.pct)} consumido · ${s.remaining >= 0 ? Utils.money(s.remaining) + ' disponible' : 'Excedido ' + Utils.money(-s.remaining)}</p>
+            </div>`;
+          }).join('')}</div>`}
+      </div>`;
+  },
+  openForm(id = null) {
+    const b = id ? Repos.budgets.find(id) : {};
+    UI.modal({ title: id ? 'Editar presupuesto' : 'Nuevo presupuesto',
+      body: `<form id="bud-form" class="space-y-4">
+        ${UI.field('Categoría', UI.select('category', CONFIG.categories, b.category || 'Comida'))}
+        ${UI.field('Límite mensual', UI.input('limit', { type: 'number', value: b.limit || '', min: 0, required: true }))}
+      </form>`,
+      footer: `<button data-close class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-medium">Cancelar</button>
+               <button onclick="Budgets.save('${id||''}')" class="px-4 py-2 rounded-xl bg-brand-600 text-white font-semibold">Guardar</button>` });
+  },
+  save(id) {
+    const f = $('#bud-form');
+    const data = { category: f.category.value, limit: Number(f.limit.value) || 0 };
+    if (id) Repos.budgets.update(id, data); else Repos.budgets.insert(data);
+    Utils.toast('Presupuesto guardado'); UI.closeModal(); Router.go('budgets');
+  },
+  async remove(id) { if (await Utils.confirm('¿Eliminar presupuesto?', '', 'Eliminar')) { Repos.budgets.remove(id); Router.go('budgets'); } },
+};
+
+/* ----------------------------------------------------------------
+ * 14) MÓDULO: METAS DE AHORRO
+ * ---------------------------------------------------------------- */
+const Goals = {
+  render() {
+    const goals = Repos.goals.all();
+    return `
+      <div class="view space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 class="text-xl font-bold">Metas de ahorro</h2><p class="text-sm text-slate-500">Define objetivos y sigue tu avance.</p></div>
+          <button onclick="Goals.openForm()" class="inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 shadow-soft"><i class="fa-solid fa-plus"></i> Nueva meta</button>
+        </div>
+        ${goals.length === 0 ? UI.empty('Sin metas todavía. ¡Crea una!', 'fa-bullseye') :
+        `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          ${goals.map(g => {
+            const pct = g.target > 0 ? Utils.clamp(g.current / g.target * 100, 0, 100) : 0;
+            const C = 2 * Math.PI * 42;
+            return `<div class="surface rounded-2xl p-5 shadow-soft text-center">
+              <div class="flex justify-between items-start">
+                <h3 class="font-semibold text-left">${Utils.escape(g.name)}</h3>
+                <div class="flex gap-1">
+                  <button onclick="Goals.openForm('${g.id}')" class="w-7 h-7 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"><i class="fa-solid fa-pen text-xs"></i></button>
+                  <button onclick="Goals.remove('${g.id}')" class="w-7 h-7 grid place-items-center rounded-lg hover:bg-rose-50 text-rose-500"><i class="fa-solid fa-trash text-xs"></i></button>
+                </div>
+              </div>
+              <div class="relative w-32 h-32 mx-auto my-3">
+                <svg viewBox="0 0 100 100" class="w-full h-full -rotate-90">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" class="text-slate-200 dark:text-slate-800" stroke-width="8"/>
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" class="text-brand-500 ring-progress" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C - C * pct / 100}"/>
+                </svg>
+                <div class="absolute inset-0 grid place-items-center"><span class="text-xl font-extrabold">${pct.toFixed(0)}%</span></div>
+              </div>
+              <p class="text-sm font-semibold">${Utils.money(g.current)} <span class="text-slate-400 font-normal">/ ${Utils.money(g.target)}</span></p>
+              ${g.deadline ? `<p class="text-xs text-slate-500 mt-1">Meta: ${Utils.fmtDate(g.deadline)}</p>` : ''}
+              <button onclick="Goals.addFunds('${g.id}')" class="mt-3 w-full rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-300 font-semibold py-2 text-sm hover:bg-brand-100"><i class="fa-solid fa-plus"></i> Abonar</button>
+            </div>`;
+          }).join('')}</div>`}
+      </div>`;
+  },
+  openForm(id = null) {
+    const g = id ? Repos.goals.find(id) : {};
+    UI.modal({ title: id ? 'Editar meta' : 'Nueva meta',
+      body: `<form id="goal-form" class="space-y-4">
+        ${UI.field('Nombre', UI.input('name', { value: g.name || '', placeholder: 'Ej: Viaje, Fondo de emergencia', required: true }))}
+        <div class="grid grid-cols-2 gap-4">
+          ${UI.field('Valor objetivo', UI.input('target', { type: 'number', value: g.target || '', min: 0, required: true }))}
+          ${UI.field('Valor actual', UI.input('current', { type: 'number', value: g.current || 0, min: 0 }))}
+        </div>
+        ${UI.field('Fecha objetivo', UI.input('deadline', { type: 'date', value: g.deadline || '' }))}
+      </form>`,
+      footer: `<button data-close class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-medium">Cancelar</button>
+               <button onclick="Goals.save('${id||''}')" class="px-4 py-2 rounded-xl bg-brand-600 text-white font-semibold">Guardar</button>` });
+  },
+  save(id) {
+    const f = $('#goal-form');
+    const data = { name: f.name.value.trim(), target: Number(f.target.value) || 0, current: Number(f.current.value) || 0, deadline: f.deadline.value || null };
+    if (id) Repos.goals.update(id, data); else Repos.goals.insert(data);
+    Utils.toast('Meta guardada'); UI.closeModal(); Router.go('goals');
+  },
+  async addFunds(id) {
+    const g = Repos.goals.find(id);
+    if (window.Swal) {
+      const { value } = await Swal.fire({ title: `Abonar a "${g.name}"`, input: 'number', inputLabelText: 'Monto', inputPlaceholder: '0', showCancelButton: true, confirmButtonColor: '#4f46e5', background: UI.isDark()?'#0f172a':'#fff', color: UI.isDark()?'#e2e8f0':'#0f172a' });
+      if (value) { Repos.goals.update(id, { current: (g.current||0) + Number(value) }); Utils.toast('Abono registrado'); Router.go('goals'); }
+    } else { const v = prompt('Monto a abonar'); if (v) { Repos.goals.update(id, { current: (g.current||0) + Number(v) }); Router.go('goals'); } }
+  },
+  async remove(id) { if (await Utils.confirm('¿Eliminar meta?', '', 'Eliminar')) { Repos.goals.remove(id); Router.go('goals'); } },
+};
+
+/* ----------------------------------------------------------------
+ * 15) MÓDULO: GASTOS RECURRENTES (suscripciones / servicios)
+ * ---------------------------------------------------------------- */
+const Recurring = {
+  render() {
+    const items = Repos.recurring.all();
+    return `
+      <div class="view space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 class="text-xl font-bold">Gastos recurrentes</h2><p class="text-sm text-slate-500">Suscripciones y servicios que se generan automáticamente cada mes.</p></div>
+          <button onclick="Recurring.openForm()" class="inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 shadow-soft"><i class="fa-solid fa-plus"></i> Nuevo recurrente</button>
+        </div>
+        ${items.length === 0 ? UI.empty('Sin gastos recurrentes. Agrega Netflix, arriendo, servicios...', 'fa-repeat') :
+        `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">${items.map(r => `
+          <div class="surface rounded-2xl p-5 shadow-soft">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl grid place-items-center bg-brand-100 text-brand-600 dark:bg-brand-500/15"><i class="fa-solid fa-repeat"></i></div>
+                <div><h3 class="font-semibold">${Utils.escape(r.name)}</h3><p class="text-xs text-slate-500">${Utils.escape(r.category)} · día ${r.dayOfMonth}</p></div>
+              </div>
+              <div class="flex gap-1">
+                <button onclick="Recurring.openForm('${r.id}')" class="w-7 h-7 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"><i class="fa-solid fa-pen text-xs"></i></button>
+                <button onclick="Recurring.remove('${r.id}')" class="w-7 h-7 grid place-items-center rounded-lg hover:bg-rose-50 text-rose-500"><i class="fa-solid fa-trash text-xs"></i></button>
+              </div>
+            </div>
+            <p class="mt-3 text-xl font-extrabold">${Utils.money(r.amount)}<span class="text-sm font-normal text-slate-400">/mes</span></p>
+            <div class="mt-2 flex items-center justify-between">
+              ${r.active !== false ? UI.badge('Activo','emerald') : UI.badge('Pausado','slate')}
+              <button onclick="Recurring.generateNow('${r.id}')" class="text-xs font-semibold text-brand-600 hover:underline">Generar este mes</button>
+            </div>
+          </div>`).join('')}</div>`}
+      </div>`;
+  },
+  openForm(id = null) {
+    const r = id ? Repos.recurring.find(id) : { dayOfMonth: 1, active: true };
+    const cards = Repos.cards.all();
+    UI.modal({ title: id ? 'Editar recurrente' : 'Nuevo gasto recurrente',
+      body: `<form id="rec-form" class="space-y-4">
+        <div class="grid sm:grid-cols-2 gap-4">
+          ${UI.field('Nombre', UI.input('name', { value: r.name || '', placeholder: 'Netflix, Arriendo...', required: true }))}
+          ${UI.field('Monto', UI.input('amount', { type: 'number', value: r.amount || '', min: 0, required: true }))}
+          ${UI.field('Categoría', UI.select('category', CONFIG.categories, r.category || 'Servicios'))}
+          ${UI.field('Día del mes', UI.input('dayOfMonth', { type: 'number', value: r.dayOfMonth || 1, min: 1, extra: 'max=31' }))}
+          ${UI.field('Método', UI.select('method', [{value:'debito',label:'Débito'},{value:'credito',label:'Crédito'},{value:'efectivo',label:'Efectivo'}], r.method || 'debito'))}
+          ${UI.field('Tarjeta', UI.select('cardId', [{value:'',label:'—'}, ...cards.map(c=>({value:c.id,label:c.name}))], r.cardId || ''))}
+        </div>
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="active" ${r.active !== false ? 'checked' : ''} class="rounded"/> Activo</label>
+      </form>`,
+      footer: `<button data-close class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-medium">Cancelar</button>
+               <button onclick="Recurring.save('${id||''}')" class="px-4 py-2 rounded-xl bg-brand-600 text-white font-semibold">Guardar</button>` });
+  },
+  save(id) {
+    const f = $('#rec-form');
+    const data = { name: f.name.value.trim(), amount: Number(f.amount.value) || 0, category: f.category.value,
+      dayOfMonth: Number(f.dayOfMonth.value) || 1, method: f.method.value, cardId: f.cardId.value || null, active: f.active.checked };
+    if (id) Repos.recurring.update(id, data); else Repos.recurring.insert(data);
+    Utils.toast('Recurrente guardado'); UI.closeModal(); Router.go('recurring');
+  },
+  async remove(id) { if (await Utils.confirm('¿Eliminar recurrente?', '', 'Eliminar')) { Repos.recurring.remove(id); Router.go('recurring'); } },
+
+  generateNow(id) {
+    const r = Repos.recurring.find(id); if (!r) return;
+    this._createExpense(r, Utils.monthKey(Utils.todayStr()));
+    Utils.toast('Gasto generado'); Router.go('recurring');
+  },
+  _createExpense(r, monthKey) {
+    const [y, m] = monthKey.split('-').map(Number);
+    const date = Utils.iso(Utils.dateOnMonth(y, m - 1, r.dayOfMonth));
+    const data = {
+      type: 'egreso', entity: r.name, amount: r.amount, category: r.category, subcategory: 'Recurrente',
+      tags: 'recurrente', date, time: '', city: '', method: r.method, cardId: r.cardId,
+      installmentsCount: 1, status: 'pendiente', recurringId: r.id, description: 'Gasto recurrente generado automáticamente',
+    };
+    if (r.method === 'credito') { data.interestRate = Engine.rateForDate(date); data.installments = Engine.buildInstallments(data, r.cardId ? Repos.cards.find(r.cardId) : null); }
+    Repos.expenses.insert(data);
+  },
+  // Genera automáticamente los recurrentes del mes actual que aún no existan
+  autoGenerate() {
+    const mk = Utils.monthKey(Utils.todayStr());
+    const existing = Repos.expenses.all();
+    Repos.recurring.where(r => r.active !== false).forEach(r => {
+      const already = existing.some(e => e.recurringId === r.id && Utils.monthKey(e.date) === mk);
+      if (!already) this._createExpense(r, mk);
+    });
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 16) HELPER DE GRÁFICOS (Chart.js)
+ * ---------------------------------------------------------------- */
+const Charts = {
+  palette: ['#6366f1','#10b981','#f59e0b','#ef4444','#0ea5e9','#a855f7','#ec4899','#14b8a6','#f97316','#64748b','#84cc16','#eab308'],
+  destroyAll() { Object.values(State.charts).forEach(c => { try { c.destroy(); } catch {} }); State.charts = {}; },
+  gridColor() { return UI.isDark() ? 'rgba(148,163,184,.15)' : 'rgba(100,116,139,.15)'; },
+  tickColor() { return UI.isDark() ? '#94a3b8' : '#475569'; },
+  make(id, config) {
+    const el = document.getElementById(id); if (!el || !window.Chart) return;
+    if (State.charts[id]) { try { State.charts[id].destroy(); } catch {} }
+    Chart.defaults.font.family = 'Inter, sans-serif';
+    Chart.defaults.color = this.tickColor();
+    State.charts[id] = new Chart(el, config);
+  },
+  // últimos n meses como claves YYYY-MM
+  lastMonths(n = 6) {
+    const out = []; const d = new Date();
+    for (let i = n - 1; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); out.push(Utils.iso(x).slice(0, 7)); }
+    return out;
+  },
+  monthLabel(mk) { const [y, m] = mk.split('-'); return Utils.monthName(+m).slice(0, 3) + ' ' + y.slice(2); },
+};
+
+/* ----------------------------------------------------------------
+ * 17) ASISTENTE FINANCIERO (IA basada en reglas)
+ * ---------------------------------------------------------------- */
+const Insights = {
+  generate() {
+    const out = [];
+    const mkNow = Utils.monthKey(Utils.todayStr());
+    const prev = Charts.lastMonths(2)[0];
+    const now = Engine.monthFlow(mkNow), before = Engine.monthFlow(prev);
+
+    // 1) Comparativa de gasto por categoría
+    const catNow = {}, catPrev = {};
+    Repos.expenses.where(e => e.type !== 'ingreso').forEach(e => {
+      const mk = Utils.monthKey(e.date);
+      if (mk === mkNow) catNow[e.category] = (catNow[e.category]||0) + e.amount;
+      if (mk === prev) catPrev[e.category] = (catPrev[e.category]||0) + e.amount;
+    });
+    Object.keys(catNow).forEach(cat => {
+      const p = catPrev[cat] || 0;
+      if (p > 0) {
+        const diff = (catNow[cat] - p) / p * 100;
+        if (diff >= 15) out.push({ type: 'warn', icon: 'fa-arrow-trend-up', text: `Gastaste ${diff.toFixed(0)}% más en ${cat} este mes (${Utils.money(catNow[cat])} vs ${Utils.money(p)}).` });
+        else if (diff <= -15) out.push({ type: 'good', icon: 'fa-arrow-trend-down', text: `Redujiste ${Math.abs(diff).toFixed(0)}% en ${cat}. ¡Buen trabajo!` });
+      }
+    });
+
+    // 2) Uso de tarjetas
+    Repos.cards.where(c => c.type === 'credito').forEach(c => {
+      const u = Engine.cardUsage(c);
+      if (u.pct >= 80) out.push({ type: 'danger', icon: 'fa-credit-card', text: `Tu tarjeta ${c.name} está al ${u.pct.toFixed(0)}% de uso. Considera bajar el saldo.` });
+    });
+
+    // 3) Presupuestos en riesgo
+    Repos.budgets.all().forEach(b => {
+      const s = Engine.budgetStatus(b, mkNow);
+      if (s.pct >= 90) out.push({ type: 'danger', icon: 'fa-wallet', text: `Tu presupuesto de ${b.category} está al ${s.pct.toFixed(0)}%.` });
+      else if (s.pct >= 70) out.push({ type: 'warn', icon: 'fa-wallet', text: `Tu presupuesto de ${b.category} se encuentra en riesgo (${s.pct.toFixed(0)}%).` });
+    });
+
+    // 4) Ahorro potencial (categoría más cara)
+    const topCat = Object.entries(catNow).sort((a, b) => b[1] - a[1])[0];
+    if (topCat && topCat[1] > 0) out.push({ type: 'tip', icon: 'fa-lightbulb', text: `Tu mayor gasto del mes es ${topCat[0]} (${Utils.money(topCat[1])}). Reducirlo 15% te ahorraría ${Utils.money(topCat[1]*0.15)}.` });
+
+    // 5) Balance del mes
+    if (now.outflow > now.income && now.income > 0) out.push({ type: 'warn', icon: 'fa-scale-unbalanced', text: `Este mes tus egresos (${Utils.money(now.outflow)}) superan tus ingresos (${Utils.money(now.income)}).` });
+
+    if (!out.length) out.push({ type: 'good', icon: 'fa-circle-check', text: 'Todo bajo control. Registra más movimientos para recibir recomendaciones personalizadas.' });
+    return out;
+  },
+  cardHTML(list) {
+    const colors = { good: 'emerald', warn: 'amber', danger: 'rose', tip: 'sky' };
+    return `<div class="space-y-2">${list.map(i => `
+      <div class="flex items-start gap-3 rounded-xl p-3 bg-${colors[i.type]}-50 dark:bg-${colors[i.type]}-500/10">
+        <i class="fa-solid ${i.icon} text-${colors[i.type]}-500 mt-0.5"></i>
+        <p class="text-sm">${i.text}</p>
+      </div>`).join('')}</div>`;
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 18) MÓDULO: DASHBOARD
+ * ---------------------------------------------------------------- */
+const Dashboard = {
+  render() {
+    const mk = Utils.monthKey(Utils.todayStr());
+    const flow = Engine.monthFlow(mk);
+    const balance = Engine.balance();
+    const debt = Engine.totalDebt();
+    const nextPay = Engine.nextPayment();
+    const nextCut = Engine.nextCut();
+    const credit = Repos.cards.where(c => c.type === 'credito');
+    const cupoTotal = Utils.sum(credit, c => Number(c.cupoTotal)||0);
+    const cupoUsed = Utils.sum(credit.map(c => Engine.cardUsage(c).used));
+    const budgets = Repos.budgets.all();
+    const budgetLimit = Utils.sum(budgets, b => b.limit);
+    const budgetSpent = Utils.sum(budgets.map(b => Engine.budgetStatus(b, mk).spent));
+
+    return `
+      <div class="view space-y-6">
+        <div class="rounded-3xl bg-gradient-to-br from-brand-600 to-indigo-800 text-white p-6 shadow-card relative overflow-hidden">
+          <div class="absolute -top-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
+          <p class="text-white/80 text-sm">Saldo disponible estimado</p>
+          <p class="text-4xl font-extrabold mt-1">${Utils.money(balance)}</p>
+          <div class="mt-4 flex flex-wrap gap-6 text-sm">
+            <div><span class="text-white/70">Ingresos del mes</span><br><b>${Utils.money(flow.income)}</b></div>
+            <div><span class="text-white/70">Gastos del mes</span><br><b>${Utils.money(flow.outflow)}</b></div>
+            <div><span class="text-white/70">Flujo de caja</span><br><b class="${flow.net>=0?'text-emerald-300':'text-rose-300'}">${Utils.money(flow.net)}</b></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          ${UI.kpi({ label: 'Deuda total', value: Utils.money(debt), icon: 'fa-hand-holding-dollar', color: 'rose' })}
+          ${UI.kpi({ label: 'Próximo pago', value: nextPay ? Utils.money(nextPay.amount) : '—', icon: 'fa-calendar-day', color: 'amber', sub: nextPay ? Utils.fmtDate(nextPay.date) : 'Sin pendientes' })}
+          ${UI.kpi({ label: 'Próximo corte', value: nextCut ? Utils.fmtDateShort(nextCut.date) : '—', icon: 'fa-scissors', color: 'sky', sub: nextCut ? nextCut.card.name : '—' })}
+          ${UI.kpi({ label: 'Uso del cupo', value: cupoTotal ? Utils.pct(cupoUsed/cupoTotal*100) : '0%', icon: 'fa-gauge-high', color: 'brand', sub: Utils.money(cupoUsed) + ' / ' + Utils.money(cupoTotal) })}
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-5">
+          <div class="surface rounded-2xl p-5 shadow-soft lg:col-span-2">
+            <h3 class="font-semibold mb-4">Ingresos vs Gastos (6 meses)</h3>
+            <canvas id="chart-flow" height="120"></canvas>
+          </div>
+          <div class="surface rounded-2xl p-5 shadow-soft">
+            <h3 class="font-semibold mb-4">Gastos por categoría</h3>
+            <canvas id="chart-cat" height="200"></canvas>
+          </div>
+          <div class="surface rounded-2xl p-5 shadow-soft">
+            <h3 class="font-semibold mb-4">Evolución de la deuda</h3>
+            <canvas id="chart-debt" height="160"></canvas>
+          </div>
+          <div class="surface rounded-2xl p-5 shadow-soft">
+            <h3 class="font-semibold mb-4">Uso de tarjetas</h3>
+            <canvas id="chart-cards" height="160"></canvas>
+          </div>
+          <div class="surface rounded-2xl p-5 shadow-soft">
+            <h3 class="font-semibold mb-3">Presupuesto consumido</h3>
+            ${budgetLimit ? `<p class="text-2xl font-extrabold">${Utils.pct(budgetSpent/budgetLimit*100)}</p>
+              <p class="text-xs text-slate-500 mb-3">${Utils.money(budgetSpent)} de ${Utils.money(budgetLimit)}</p>
+              ${UI.progress(budgetSpent/budgetLimit*100, budgetSpent>=budgetLimit?'rose':'brand')}`
+              : `<p class="text-sm text-slate-400">Define presupuestos para verlos aquí.</p>`}
+          </div>
+        </div>
+
+        <div class="surface rounded-2xl p-5 shadow-soft">
+          <h3 class="font-semibold mb-3 flex items-center gap-2"><i class="fa-solid fa-robot text-brand-500"></i> Asistente financiero</h3>
+          ${Insights.cardHTML(Insights.generate())}
+        </div>
+      </div>`;
+  },
+
+  mount() {
+    const months = Charts.lastMonths(6);
+    const income = months.map(m => Engine.monthFlow(m).income);
+    const outflow = months.map(m => Engine.monthFlow(m).outflow);
+    const labels = months.map(Charts.monthLabel);
+
+    Charts.make('chart-flow', {
+      type: 'bar',
+      data: { labels, datasets: [
+        { label: 'Ingresos', data: income, backgroundColor: '#10b981', borderRadius: 6 },
+        { label: 'Gastos', data: outflow, backgroundColor: '#6366f1', borderRadius: 6 },
+      ]},
+      options: { responsive: true, plugins: { legend: { position: 'bottom' } },
+        scales: { x: { grid: { display: false }, ticks: { color: Charts.tickColor() } }, y: { grid: { color: Charts.gridColor() }, ticks: { color: Charts.tickColor(), callback: v => Utils.number(v) } } } },
+    });
+
+    // categorías mes actual
+    const mk = Utils.monthKey(Utils.todayStr());
+    const catMap = {};
+    Repos.expenses.where(e => e.type !== 'ingreso' && Utils.monthKey(e.date) === mk).forEach(e => catMap[e.category] = (catMap[e.category]||0) + e.amount);
+    const catLabels = Object.keys(catMap), catData = Object.values(catMap);
+    Charts.make('chart-cat', {
+      type: 'doughnut',
+      data: { labels: catLabels.length ? catLabels : ['Sin datos'], datasets: [{ data: catData.length ? catData : [1], backgroundColor: Charts.palette, borderWidth: 0 }] },
+      options: { responsive: true, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } },
+    });
+
+    // evolución deuda (pendiente acumulado por mes futuro de cuotas)
+    const debtMonths = Charts.lastMonths(6);
+    const debtData = debtMonths.map(m => {
+      let total = 0;
+      Repos.expenses.where(e => e.method === 'credito' && e.installments).forEach(e => {
+        (e.installments||[]).forEach(c => { if (c.dueDate.slice(0,7) === m) total += c.value; });
+      });
+      return total;
+    });
+    Charts.make('chart-debt', {
+      type: 'line',
+      data: { labels: debtMonths.map(Charts.monthLabel), datasets: [{ label: 'Cuotas', data: debtData, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,.15)', fill: true, tension: .35 }] },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: Charts.gridColor() }, ticks: { callback: v => Utils.number(v) } } } },
+    });
+
+    // uso de tarjetas
+    const cc = Repos.cards.where(c => c.type === 'credito');
+    Charts.make('chart-cards', {
+      type: 'bar',
+      data: { labels: cc.length ? cc.map(c => c.name) : ['Sin tarjetas'], datasets: [{ label: '% uso', data: cc.length ? cc.map(c => Engine.cardUsage(c).pct.toFixed(1)) : [0], backgroundColor: cc.map((_,i)=>Charts.palette[i%Charts.palette.length]), borderRadius: 6 }] },
+      options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { max: 100, grid: { color: Charts.gridColor() } }, y: { grid: { display: false } } } },
+    });
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 19) MÓDULO: REPORTES
+ * ---------------------------------------------------------------- */
+const Reports = {
+  render() {
+    return `
+      <div class="view space-y-6">
+        <div><h2 class="text-xl font-bold">Reportes</h2><p class="text-sm text-slate-500">Analiza tus finanzas con gráficos avanzados.</p></div>
+        <div class="grid lg:grid-cols-2 gap-5">
+          <div class="surface rounded-2xl p-5 shadow-soft"><h3 class="font-semibold mb-4">Egresos por mes (12 meses)</h3><canvas id="rep-monthly" height="140"></canvas></div>
+          <div class="surface rounded-2xl p-5 shadow-soft"><h3 class="font-semibold mb-4">Gastos por categoría (histórico)</h3><canvas id="rep-cat" height="140"></canvas></div>
+          <div class="surface rounded-2xl p-5 shadow-soft"><h3 class="font-semibold mb-4">Gasto por banco</h3><canvas id="rep-bank" height="140"></canvas></div>
+          <div class="surface rounded-2xl p-5 shadow-soft"><h3 class="font-semibold mb-4">Comparativo Ingresos vs Egresos</h3><canvas id="rep-cmp" height="140"></canvas></div>
+        </div>
+      </div>`;
+  },
+  mount() {
+    const months = Charts.lastMonths(12);
+    const labels = months.map(Charts.monthLabel);
+    Charts.make('rep-monthly', { type: 'bar',
+      data: { labels, datasets: [{ label: 'Egresos', data: months.map(m => Engine.monthFlow(m).outflow), backgroundColor: '#6366f1', borderRadius: 5 }] },
+      options: { plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: Charts.gridColor() }, ticks: { callback: v => Utils.number(v) } } } } });
+
+    const catMap = {};
+    Repos.expenses.where(e => e.type !== 'ingreso').forEach(e => catMap[e.category] = (catMap[e.category]||0) + e.amount);
+    Charts.make('rep-cat', { type: 'pie',
+      data: { labels: Object.keys(catMap).length ? Object.keys(catMap) : ['Sin datos'], datasets: [{ data: Object.values(catMap).length ? Object.values(catMap) : [1], backgroundColor: Charts.palette, borderWidth: 0 }] },
+      options: { plugins: { legend: { position: 'right', labels: { boxWidth: 12 } } } } });
+
+    const bankMap = {};
+    Repos.expenses.where(e => e.type !== 'ingreso' && e.cardId).forEach(e => { const c = Repos.cards.find(e.cardId); if (c) bankMap[c.bank] = (bankMap[c.bank]||0) + e.amount; });
+    Charts.make('rep-bank', { type: 'doughnut',
+      data: { labels: Object.keys(bankMap).length ? Object.keys(bankMap) : ['Sin datos'], datasets: [{ data: Object.values(bankMap).length ? Object.values(bankMap) : [1], backgroundColor: Charts.palette, borderWidth: 0 }] },
+      options: { cutout: '60%', plugins: { legend: { position: 'right', labels: { boxWidth: 12 } } } } });
+
+    Charts.make('rep-cmp', { type: 'line',
+      data: { labels, datasets: [
+        { label: 'Ingresos', data: months.map(m => Engine.monthFlow(m).income), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.12)', fill: true, tension: .35 },
+        { label: 'Egresos', data: months.map(m => Engine.monthFlow(m).outflow), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,.12)', fill: true, tension: .35 },
+      ]},
+      options: { plugins: { legend: { position: 'bottom' } }, scales: { x: { grid: { display: false } }, y: { grid: { color: Charts.gridColor() }, ticks: { callback: v => Utils.number(v) } } } } });
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 20) MÓDULO: CALENDARIO FINANCIERO
+ * ---------------------------------------------------------------- */
+const Calendar = {
+  current: new Date(),
+  render() {
+    const d = this.current;
+    const year = d.getFullYear(), month = d.getMonth();
+    const first = new Date(year, month, 1);
+    const startDay = (first.getDay() + 6) % 7; // lunes = 0
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const events = this.eventsForMonth(year, month);
+
+    let cells = '';
+    for (let i = 0; i < startDay; i++) cells += `<div class="min-h-20 rounded-xl bg-slate-50 dark:bg-slate-800/40"></div>`;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const key = Utils.iso(new Date(year, month, day));
+      const evs = events[key] || [];
+      const isToday = key === Utils.todayStr();
+      cells += `<div class="min-h-20 rounded-xl border border-slate-200 dark:border-slate-800 p-1.5 ${isToday ? 'ring-2 ring-brand-500' : ''}">
+        <div class="text-xs font-semibold ${isToday ? 'text-brand-600' : 'text-slate-400'}">${day}</div>
+        <div class="space-y-0.5 mt-0.5">${evs.slice(0,3).map(e => `<div class="text-[10px] truncate px-1 py-0.5 rounded bg-${e.color}-100 text-${e.color}-700 dark:bg-${e.color}-500/15 dark:text-${e.color}-300" title="${Utils.escape(e.label)}">${e.icon} ${Utils.escape(e.label)}</div>`).join('')}${evs.length>3?`<div class="text-[10px] text-slate-400">+${evs.length-3} más</div>`:''}</div>
+      </div>`;
+    }
+
+    return `
+      <div class="view space-y-6">
+        <div class="flex items-center justify-between">
+          <div><h2 class="text-xl font-bold">Calendario financiero</h2><p class="text-sm text-slate-500">Pagos, cortes, ingresos y suscripciones del mes.</p></div>
+          <div class="flex items-center gap-2">
+            <button onclick="Calendar.move(-1)" class="w-9 h-9 grid place-items-center rounded-lg border border-slate-300 dark:border-slate-700"><i class="fa-solid fa-chevron-left"></i></button>
+            <span class="font-semibold w-36 text-center">${Utils.monthName(month+1)} ${year}</span>
+            <button onclick="Calendar.move(1)" class="w-9 h-9 grid place-items-center rounded-lg border border-slate-300 dark:border-slate-700"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
+        <div class="surface rounded-2xl p-4 shadow-soft">
+          <div class="grid grid-cols-7 gap-1.5 mb-1.5 text-center text-xs font-semibold text-slate-400">
+            ${['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(x=>`<div>${x}</div>`).join('')}
+          </div>
+          <div class="grid grid-cols-7 gap-1.5">${cells}</div>
+          <div class="flex flex-wrap gap-4 mt-4 text-xs text-slate-500">
+            <span><i class="fa-solid fa-circle text-rose-400"></i> Pago de cuota</span>
+            <span><i class="fa-solid fa-circle text-sky-400"></i> Corte</span>
+            <span><i class="fa-solid fa-circle text-emerald-400"></i> Ingreso</span>
+            <span><i class="fa-solid fa-circle text-amber-400"></i> Recurrente</span>
+          </div>
+        </div>
+      </div>`;
+  },
+  eventsForMonth(year, month) {
+    const ev = {};
+    const add = (date, label, color, icon) => { (ev[date] ||= []).push({ label, color, icon }); };
+    // Cuotas
+    Repos.expenses.where(e => e.method === 'credito' && e.installments).forEach(e => {
+      (e.installments||[]).forEach(c => { const dd = Utils.parseDate(c.dueDate); if (dd.getFullYear()===year && dd.getMonth()===month) add(c.dueDate, `${e.entity} #${c.number}`, c.status==='pagada'?'emerald':'rose', '💳'); });
+    });
+    // Ingresos / egresos del mes
+    Repos.expenses.where(e => e.method !== 'credito').forEach(e => { const dd = Utils.parseDate(e.date); if (dd.getFullYear()===year && dd.getMonth()===month) add(e.date, e.entity, e.type==='ingreso'?'emerald':'slate', e.type==='ingreso'?'⬆️':'🧾'); });
+    // Cortes de tarjetas
+    Repos.cards.where(c => c.type === 'credito' && c.cutDay).forEach(c => { const date = Utils.iso(Utils.dateOnMonth(year, month, c.cutDay)); add(date, `Corte ${c.name}`, 'sky', '✂️'); });
+    // Recurrentes
+    Repos.recurring.where(r => r.active !== false).forEach(r => { const date = Utils.iso(Utils.dateOnMonth(year, month, r.dayOfMonth)); add(date, r.name, 'amber', '🔁'); });
+    return ev;
+  },
+  move(n) { this.current = new Date(this.current.getFullYear(), this.current.getMonth() + n, 1); Router.go('calendar'); },
+};
+
+/* ----------------------------------------------------------------
+ * 21) MÓDULO: BUSCADOR GLOBAL
+ * ---------------------------------------------------------------- */
+const Search = {
+  render() {
+    const q = State.searchQuery || '';
+    return `
+      <div class="view space-y-6">
+        <div><h2 class="text-xl font-bold">Buscador</h2><p class="text-sm text-slate-500">Busca por entidad, banco, tarjeta, categoría, monto, estado, etiqueta o texto libre.</p></div>
+        <div class="surface rounded-2xl p-2 flex items-center">
+          <i class="fa-solid fa-magnifying-glass text-slate-400 px-3"></i>
+          <input id="search-box" value="${Utils.escape(q)}" oninput="Search.run(this.value)" placeholder="Escribe para buscar..." class="flex-1 bg-transparent py-3 outline-none" autofocus/>
+        </div>
+        <div id="search-results"></div>
+      </div>`;
+  },
+  mount() { this.run(State.searchQuery || ''); },
+  run(q) {
+    State.searchQuery = q;
+    const res = $('#search-results'); if (!res) return;
+    const term = q.trim().toLowerCase();
+    if (!term) { res.innerHTML = UI.empty('Empieza a escribir para buscar.', 'fa-magnifying-glass'); return; }
+
+    const expenses = Repos.expenses.all().filter(e => {
+      const card = e.cardId ? Repos.cards.find(e.cardId) : null;
+      const hay = [e.entity, e.description, e.category, e.subcategory, e.tags, e.city, e.method, e.status, String(e.amount), card?.name, card?.bank].join(' ').toLowerCase();
+      return hay.includes(term);
+    });
+    const cards = Repos.cards.all().filter(c => [c.name, c.bank, c.brand, c.last4].join(' ').toLowerCase().includes(term));
+
+    res.innerHTML = `
+      ${cards.length ? `<h3 class="font-semibold mb-2 mt-2">Tarjetas (${cards.length})</h3>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">${cards.map(c => `<div class="surface rounded-xl p-3 flex items-center gap-3 cursor-pointer" onclick="Cards.openDetail('${c.id}')"><div class="w-9 h-9 rounded-lg grid place-items-center bg-brand-100 text-brand-600 dark:bg-brand-500/15"><i class="fa-solid fa-credit-card"></i></div><div><p class="font-medium text-sm">${Utils.escape(c.name)}</p><p class="text-xs text-slate-500">${c.bank} ····${c.last4||''}</p></div></div>`).join('')}</div>` : ''}
+      ${expenses.length ? `<h3 class="font-semibold mb-2">Movimientos (${expenses.length})</h3><div class="space-y-2">${expenses.map(e => Expenses.rowHTML(Engine.refreshInstallmentStatus(e))).join('')}</div>`
+        : (cards.length ? '' : UI.empty('Sin resultados para "' + Utils.escape(q) + '"', 'fa-ban'))}`;
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 22) MÓDULO: RESPALDOS / EXPORTACIÓN
+ * ---------------------------------------------------------------- */
+const Backup = {
+  download(filename, content, type = 'application/json') {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
+  snapshot() {
+    return {
+      app: CONFIG.appName, version: CONFIG.version, exportedAt: Utils.nowISO(), user: State.user?.email,
+      data: {
+        cards: Repos.cards.all(), rates: Repos.rates.all(), expenses: Repos.expenses.all(),
+        budgets: Repos.budgets.all(), goals: Repos.goals.all(), recurring: Repos.recurring.all(),
+      },
+    };
+  },
+  exportJSON() { this.download(`finanzas-pro-respaldo-${Utils.todayStr()}.json`, JSON.stringify(this.snapshot(), null, 2)); Utils.toast('Respaldo exportado'); },
+  exportCSV() {
+    const rows = [['ID','Fecha','Entidad','Tipo','Categoria','Metodo','Monto','Cuotas','Tasa','Estado']];
+    Repos.expenses.all().forEach(e => rows.push([e.id, e.date, e.entity, e.type, e.category, e.method, e.amount, e.installmentsCount, e.interestRate||0, e.status]));
+    const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g,'""')}"`).join(',')).join('\n');
+    this.download(`finanzas-pro-gastos-${Utils.todayStr()}.csv`, csv, 'text/csv');
+    Utils.toast('CSV exportado');
+  },
+  async importJSON(file) {
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const d = json.data || json;
+      if (!d || typeof d !== 'object') throw new Error('Formato inválido');
+      if (!await Utils.confirm('¿Restaurar respaldo?', 'Esto reemplazará TODOS tus datos actuales.', 'Restaurar')) return;
+      Repos.cards.bulkSet(d.cards || []);
+      Repos.rates.bulkSet(d.rates || []);
+      Repos.expenses.bulkSet(d.expenses || []);
+      Repos.budgets.bulkSet(d.budgets || []);
+      Repos.goals.bulkSet(d.goals || []);
+      Repos.recurring.bulkSet(d.recurring || []);
+      Utils.toast('Respaldo restaurado'); Router.go('dashboard');
+    } catch (e) { Utils.toast('Error al importar: ' + e.message, 'error'); }
+  },
+  async clearAll() {
+    if (!await Utils.confirm('¿Borrar todos los datos?', 'Se eliminarán tarjetas, gastos, presupuestos y metas de tu cuenta. No se puede deshacer.', 'Borrar todo')) return;
+    ['cards','rates','expenses','budgets','goals','recurring','audit'].forEach(n => Storage.remove(`u:${State.userId}:${n}`));
+    Utils.toast('Datos eliminados'); Router.go('dashboard');
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 23) MÓDULO: AJUSTES + HISTORIAL (auditoría) + Usuarios (admin)
+ * ---------------------------------------------------------------- */
+const Settings = {
+  render() {
+    const u = State.user;
+    const audit = Storage.read(`u:${State.userId}:audit`, []).slice(0, 40);
+    const isAdmin = u.role === 'admin';
+    const users = isAdmin ? Auth.getUsers() : [];
+    const actionLabel = { create: 'Creó', update: 'Modificó', delete: 'Eliminó' };
+    const actionColor = { create: 'emerald', update: 'amber', delete: 'rose' };
+    return `
+      <div class="view space-y-6">
+        <div><h2 class="text-xl font-bold">Ajustes y respaldos</h2><p class="text-sm text-slate-500">Perfil, copias de seguridad e historial de actividad.</p></div>
+
+        <div class="grid lg:grid-cols-2 gap-5">
+          <div class="surface rounded-2xl p-5 shadow-soft">
+            <h3 class="font-semibold mb-3">Perfil</h3>
+            <div class="flex items-center gap-3">
+              <div class="w-14 h-14 rounded-2xl bg-brand-600 text-white grid place-items-center text-xl font-bold">${(u.name||u.email)[0].toUpperCase()}</div>
+              <div><p class="font-semibold">${Utils.escape(u.name)}</p><p class="text-sm text-slate-500">${Utils.escape(u.email)}</p>${UI.badge(u.role, u.role==='admin'?'brand':'slate')}</div>
+            </div>
+          </div>
+
+          <div class="surface rounded-2xl p-5 shadow-soft">
+            <h3 class="font-semibold mb-3">Apariencia</h3>
+            <button onclick="UI.toggleTheme()" class="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 font-medium"><i class="fa-solid fa-circle-half-stroke"></i> Cambiar tema (claro/oscuro)</button>
+          </div>
+
+          <div class="surface rounded-2xl p-5 shadow-soft">
+            <h3 class="font-semibold mb-3">Copias de seguridad</h3>
+            <p class="text-sm text-slate-500 mb-3">Tus datos se guardan automáticamente en este navegador. Exporta un respaldo para no perderlos.</p>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="Backup.exportJSON()" class="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-download"></i> Exportar JSON</button>
+              <button onclick="Backup.exportCSV()" class="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-medium"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
+              <label class="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-medium cursor-pointer"><i class="fa-solid fa-upload"></i> Importar
+                <input type="file" accept="application/json" class="hidden" onchange="if(this.files[0])Backup.importJSON(this.files[0])"/></label>
+            </div>
+          </div>
+
+          <div class="surface rounded-2xl p-5 shadow-soft border-rose-200 dark:border-rose-500/30">
+            <h3 class="font-semibold mb-3 text-rose-600">Zona de peligro</h3>
+            <button onclick="Backup.clearAll()" class="rounded-xl bg-rose-600 text-white px-4 py-2 text-sm font-semibold"><i class="fa-solid fa-trash"></i> Borrar todos mis datos</button>
+          </div>
+        </div>
+
+        ${isAdmin ? `<div class="surface rounded-2xl p-5 shadow-soft">
+          <h3 class="font-semibold mb-3">Usuarios registrados (${users.length})</h3>
+          <div class="space-y-2">${users.map(x => `<div class="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm"><div><b>${Utils.escape(x.name)}</b> <span class="text-slate-500">${Utils.escape(x.email)}</span></div>${UI.badge(x.role, x.role==='admin'?'brand':'slate')}</div>`).join('')}</div>
+        </div>` : ''}
+
+        <div class="surface rounded-2xl p-5 shadow-soft">
+          <h3 class="font-semibold mb-3">Historial de actividad</h3>
+          ${audit.length ? `<div class="space-y-1 max-h-96 overflow-y-auto">${audit.map(a => `
+            <div class="flex items-center gap-3 text-sm py-1.5 border-b border-slate-100 dark:border-slate-800/60 last:border-0">
+              ${UI.badge(actionLabel[a.action]||a.action, actionColor[a.action]||'slate')}
+              <span class="flex-1 truncate">${a.entity}${a.label ? ' · ' + Utils.escape(a.label) : ''}</span>
+              <span class="text-xs text-slate-400">${new Date(a.at).toLocaleString(CONFIG.locale)}</span>
+            </div>`).join('')}</div>` : `<p class="text-sm text-slate-400">Sin actividad registrada.</p>`}
+        </div>
+      </div>`;
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 24) MÓDULO: NOTIFICACIONES
+ * ---------------------------------------------------------------- */
+const Notifications = {
+  compute() {
+    const out = [];
+    const today = Utils.todayStr();
+    // Próximos pagos (ventana)
+    Engine.pendingInstallments().forEach(p => {
+      const days = Utils.daysUntil(p.cuota.dueDate);
+      if (days < 0) out.push({ icon: 'fa-triangle-exclamation', color: 'rose', text: `Cuota vencida: ${p.expense.entity} #${p.cuota.number} (${Utils.money(p.cuota.value)})` });
+      else if (days <= CONFIG.paymentDaysAhead) out.push({ icon: 'fa-calendar-day', color: 'amber', text: `Pago en ${days===0?'hoy':days+'d'}: ${p.expense.entity} ${Utils.money(p.cuota.value)}` });
+    });
+    // Próximo corte
+    const nc = Engine.nextCut();
+    if (nc && Utils.daysUntil(nc.date) <= CONFIG.paymentDaysAhead) out.push({ icon: 'fa-scissors', color: 'sky', text: `Corte de ${nc.card.name} el ${Utils.fmtDateShort(nc.date)}` });
+    // Presupuestos
+    const mk = Utils.monthKey(today);
+    Repos.budgets.all().forEach(b => { const s = Engine.budgetStatus(b, mk); if (s.pct >= 80) out.push({ icon: 'fa-wallet', color: s.pct>=100?'rose':'amber', text: `Presupuesto ${b.category} al ${s.pct.toFixed(0)}%` }); });
+    // Garantías próximas
+    Repos.expenses.where(e => e.warranty).forEach(e => { const d = Utils.daysUntil(e.warranty); if (d >= 0 && d <= 30) out.push({ icon: 'fa-shield-halved', color: 'sky', text: `Garantía de ${e.entity} vence en ${d}d` }); });
+    // Metas próximas
+    Repos.goals.all().forEach(g => { const pct = g.target ? g.current/g.target*100 : 0; if (pct >= 90 && pct < 100) out.push({ icon: 'fa-bullseye', color: 'emerald', text: `¡Casi logras tu meta "${g.name}" (${pct.toFixed(0)}%)!` }); });
+    return out;
+  },
+  refresh() {
+    const list = this.compute();
+    const badge = $('#notif-badge');
+    if (badge) badge.classList.toggle('hidden', list.length === 0);
+  },
+  toggle() {
+    const panel = $('#notif-panel');
+    if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
+    const list = this.compute();
+    panel.innerHTML = `<div class="surface rounded-2xl shadow-card overflow-hidden animate__animated animate__fadeInDown animate__faster">
+      <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between"><h4 class="font-semibold">Notificaciones</h4><span class="text-xs text-slate-400">${list.length}</span></div>
+      <div class="max-h-96 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+        ${list.length ? list.map(n => `<div class="flex items-start gap-3 px-4 py-3"><i class="fa-solid ${n.icon} text-${n.color}-500 mt-0.5"></i><p class="text-sm">${n.text}</p></div>`).join('')
+          : `<p class="px-4 py-8 text-center text-sm text-slate-400">Sin notificaciones 🎉</p>`}
+      </div></div>`;
+    panel.classList.remove('hidden');
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 25) ROUTER / NAVEGACIÓN
+ * ---------------------------------------------------------------- */
+const NAV = [
+  { id: 'dashboard', label: 'Dashboard', icon: 'fa-gauge-high', module: Dashboard, title: 'Dashboard' },
+  { id: 'expenses', label: 'Gastos', icon: 'fa-receipt', module: Expenses, title: 'Gastos y movimientos' },
+  { id: 'payments', label: 'Centro de pagos', icon: 'fa-money-bill-transfer', module: Payments, title: 'Centro de pagos' },
+  { id: 'cards', label: 'Tarjetas', icon: 'fa-credit-card', module: Cards, title: 'Tarjetas' },
+  { id: 'rates', label: 'Intereses', icon: 'fa-percent', module: Rates, title: 'Tasas de interés' },
+  { id: 'budgets', label: 'Presupuestos', icon: 'fa-wallet', module: Budgets, title: 'Presupuestos' },
+  { id: 'goals', label: 'Metas', icon: 'fa-bullseye', module: Goals, title: 'Metas de ahorro' },
+  { id: 'recurring', label: 'Recurrentes', icon: 'fa-repeat', module: Recurring, title: 'Gastos recurrentes' },
+  { id: 'calendar', label: 'Calendario', icon: 'fa-calendar-days', module: Calendar, title: 'Calendario financiero' },
+  { id: 'reports', label: 'Reportes', icon: 'fa-chart-column', module: Reports, title: 'Reportes' },
+  { id: 'search', label: 'Buscador', icon: 'fa-magnifying-glass', module: Search, title: 'Buscador' },
+  { id: 'settings', label: 'Ajustes', icon: 'fa-gear', module: Settings, title: 'Ajustes y respaldos' },
+];
+
+const Router = {
+  go(id) {
+    const item = NAV.find(n => n.id === id) || NAV[0];
+    State.view = item.id;
+    Charts.destroyAll();
+    $('#main-content').innerHTML = item.module.render();
+    $('#page-title').textContent = item.title;
+    // Vista especial: expenses necesita poblar lista
+    if (item.id === 'expenses') Expenses.applyFilters();
+    if (typeof item.module.mount === 'function') item.module.mount();
+    // nav activo
+    $$('#nav-menu .nav-link').forEach(a => a.classList.toggle('active', a.dataset.view === item.id));
+    // cerrar sidebar móvil
+    if (window.innerWidth < 1024) App.closeSidebar();
+    Notifications.refresh();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
+  refreshCharts() {
+    const item = NAV.find(n => n.id === State.view);
+    if (item && typeof item.module.mount === 'function') { try { item.module.mount(); } catch {} }
+  },
+};
+
+/* ----------------------------------------------------------------
+ * 26) APP — inicialización, sesión y eventos globales
+ * ---------------------------------------------------------------- */
+const App = {
+  buildNav() {
+    $('#nav-menu').innerHTML = NAV.map(n => `
+      <a href="#" data-view="${n.id}" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+        <i class="fa-solid ${n.icon} w-5 text-center text-slate-400"></i> ${n.label}
+      </a>`).join('');
+    $$('#nav-menu .nav-link').forEach(a => a.addEventListener('click', e => { e.preventDefault(); Router.go(a.dataset.view); }));
+
+    const u = State.user;
+    $('#sidebar-user').innerHTML = `
+      <div class="w-10 h-10 rounded-xl bg-brand-600 text-white grid place-items-center font-bold">${(u.name||u.email)[0].toUpperCase()}</div>
+      <div class="flex-1 min-w-0"><p class="font-semibold text-sm truncate">${Utils.escape(u.name)}</p><p class="text-xs text-slate-500 truncate">${Utils.escape(u.email)}</p></div>
+      <button id="btn-logout" class="w-8 h-8 grid place-items-center rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-500" title="Cerrar sesión"><i class="fa-solid fa-right-from-bracket"></i></button>`;
+    $('#btn-logout').addEventListener('click', async () => { if (await Utils.confirm('¿Cerrar sesión?', '', 'Salir')) Auth.logout(); });
+  },
+
+  openSidebar() { $('#sidebar').classList.remove('-translate-x-full'); $('#sidebar-overlay').classList.remove('hidden'); },
+  closeSidebar() { $('#sidebar').classList.add('-translate-x-full'); $('#sidebar-overlay').classList.add('hidden'); },
+
+  enter() {
+    $('#auth-screen').classList.add('hidden');
+    $('#app').classList.remove('hidden');
+    this.buildNav();
+    Recurring.autoGenerate();      // genera recurrentes del mes si faltan
+    Router.go('dashboard');
+    Notifications.refresh();
+  },
+
+  wireAuth() {
+    // toggles login/registro
+    $('#link-to-register').addEventListener('click', () => { $('#form-login').classList.add('hidden'); $('#form-register').classList.remove('hidden'); });
+    $('#link-to-login').addEventListener('click', () => { $('#form-register').classList.add('hidden'); $('#form-login').classList.remove('hidden'); });
+
+    // mostrar/ocultar contraseña
+    $$('[data-toggle-pass]').forEach(b => b.addEventListener('click', () => { const inp = b.previousElementSibling; inp.type = inp.type === 'password' ? 'text' : 'password'; b.querySelector('i').className = inp.type === 'password' ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'; }));
+
+    // login
+    $('#form-login').addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = e.target;
+      try { await Auth.login(f.email.value, f.password.value); App.enter(); Utils.toast('Bienvenido ' + (State.user.name||'')); }
+      catch (err) { Utils.toast(err.message, 'error'); }
+    });
+
+    // registro
+    $('#form-register').addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = e.target;
+      try { const u = await Auth.register({ name: f.name.value, email: f.email.value, password: f.password.value }); await Auth.login(u.email, f.password.value); App.enter(); Utils.toast('Cuenta creada'); }
+      catch (err) { Utils.toast(err.message, 'error'); }
+    });
+
+    // recuperación simulada
+    $('#link-forgot').addEventListener('click', async () => {
+      if (!window.Swal) return alert('Recuperación simulada: contacta al admin.');
+      const { value: email } = await Swal.fire({ title: 'Recuperar contraseña', input: 'email', inputPlaceholder: 'Tu correo', showCancelButton: true, confirmButtonColor: '#4f46e5', background: UI.isDark()?'#0f172a':'#fff', color: UI.isDark()?'#e2e8f0':'#0f172a' });
+      if (!email) return;
+      const exists = await Auth.forgot(email);
+      if (!exists) return Utils.toast('Correo no registrado', 'error');
+      const { value: pass } = await Swal.fire({ title: 'Nueva contraseña', input: 'password', inputPlaceholder: 'Define una nueva', showCancelButton: true, confirmButtonColor: '#4f46e5', background: UI.isDark()?'#0f172a':'#fff', color: UI.isDark()?'#e2e8f0':'#0f172a' });
+      if (!pass) return;
+      await Auth.resetPassword(email, pass);
+      Utils.toast('Contraseña actualizada, ya puedes ingresar');
+    });
+  },
+
+  wireTopbar() {
+    $('#btn-theme').addEventListener('click', () => UI.toggleTheme());
+    $('#btn-menu').addEventListener('click', () => App.openSidebar());
+    $('#sidebar-overlay').addEventListener('click', () => App.closeSidebar());
+    $('#btn-quick-add').addEventListener('click', () => Expenses.openForm());
+    $('#btn-notifications').addEventListener('click', (e) => { e.stopPropagation(); Notifications.toggle(); });
+    document.addEventListener('click', (e) => { const p = $('#notif-panel'); if (p && !p.classList.contains('hidden') && !p.contains(e.target) && !e.target.closest('#btn-notifications')) p.classList.add('hidden'); });
+    $('#global-search-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { State.searchQuery = e.target.value; Router.go('search'); } });
+  },
+
+  async init() {
+    $('#footer-year').textContent = new Date().getFullYear();
+    UI.initTheme();
+    this.wireAuth();
+    this.wireTopbar();
+    await Auth.seedAdmin();
+    if (Auth.restore()) this.enter();
+  },
+};
+
+/* Exponer módulos al ámbito global para los manejadores inline (onclick, etc.) */
+Object.assign(window, {
+  CONFIG, Utils, Storage, Repository, Repos, Audit, State, UI, Auth, Engine,
+  Cards, Rates, Expenses, Payments, Budgets, Goals, Recurring,
+  Charts, Insights, Dashboard, Reports, Calendar, Search, Backup, Settings,
+  Notifications, NAV, Router, App,
+});
+
+/* Arranque */
+document.addEventListener('DOMContentLoaded', () => App.init());
+  </script>
+</body>
+</html>
