@@ -1282,7 +1282,11 @@ const Expenses = {
           <div id="receipt-area" class="${hasReceipt ? '' : 'hidden'} mt-2">
             <input type="file" name="receiptFile" accept="image/*" multiple onchange="Expenses.onReceiptAdd(this)" class="w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:text-white file:px-3 file:py-2 file:font-medium"/>
             <input type="hidden" name="receipts" value="${Utils.escape(JSON.stringify(receipts))}" />
-            <div id="receipt-preview" class="mt-2 flex flex-wrap">${this.receiptThumbs(receipts)}</div>
+            <div id="receipt-carousel" class="relative mt-2 ${receipts.length ? '' : 'hidden'}">
+              <button type="button" onclick="Expenses.scrollReceipts(-1)" class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow grid place-items-center"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+              <div id="receipt-preview" class="flex gap-2 overflow-x-auto scroll-smooth px-9 py-1">${this.receiptThumbs(receipts)}</div>
+              <button type="button" onclick="Expenses.scrollReceipts(1)" class="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow grid place-items-center"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+            </div>
           </div>
         </div>
       </div>
@@ -1312,11 +1316,12 @@ const Expenses = {
   },
 
   receiptThumbs(arr) {
-    return (arr || []).map((u, i) => `<div class="relative inline-block mr-2 mb-2">
+    return (arr || []).map((u, i) => `<div class="relative flex-shrink-0">
       <img src="${u}" class="h-20 w-20 object-cover rounded-lg border border-slate-200 dark:border-slate-700"/>
       <button type="button" onclick="Expenses.removeReceipt(${i})" class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-rose-600 text-white text-xs grid place-items-center shadow">&times;</button>
     </div>`).join('');
   },
+  scrollReceipts(dir) { const el = $('#receipt-preview'); if (el) el.scrollBy({ left: dir * 180, behavior: 'smooth' }); },
   toggleWarranty(form) {
     const yes = form.warrantyApplies.value === 'si';
     $('#warranty-area').classList.toggle('hidden', !yes);
@@ -1340,7 +1345,8 @@ const Expenses = {
   },
   renderReceipts(f) {
     let arr = []; try { arr = JSON.parse(f.receipts.value || '[]'); } catch {}
-    $('#receipt-preview').innerHTML = this.receiptThumbs(arr);
+    const prev = $('#receipt-preview'); if (prev) prev.innerHTML = this.receiptThumbs(arr);
+    const car = $('#receipt-carousel'); if (car) car.classList.toggle('hidden', arr.length === 0);
   },
   removeReceipt(i) {
     const f = $('#exp-form'); let arr = []; try { arr = JSON.parse(f.receipts.value || '[]'); } catch {}
@@ -1472,9 +1478,40 @@ const Expenses = {
     }
 
     this.addEntity(data.entity); this.addCity(data.city);
-    if (id) { Repos.expenses.update(id, data); Utils.toast('Registro actualizado'); }
-    else { Repos.expenses.insert(data); Utils.toast(isIncome ? 'Ingreso guardado' : 'Egreso guardado'); }
-    UI.closeModal(); Router.go(State.view);
+    const saved = id ? Repos.expenses.update(id, data) : Repos.expenses.insert(data);
+    // refrescar la vista de fondo para que el registro quede consultable de inmediato
+    Router.go(State.view);
+    // pantalla de confirmación dentro del modal
+    this.showSuccess(saved);
+  },
+
+  // Pantalla de éxito tras guardar
+  showSuccess(e) {
+    const box = $('#modal-root .modal-box'); if (!box) { Utils.toast('Registro guardado'); return; }
+    const isIncome = e.type === 'ingreso';
+    const card = e.cardId ? Repos.cards.find(e.cardId) : null;
+    const t = Engine.expenseTotals(Engine.refreshInstallmentStatus(e));
+    box.innerHTML = `
+      <div class="p-8 text-center animate__animated animate__fadeIn animate__faster">
+        <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 grid place-items-center text-3xl mx-auto mb-4 animate__animated animate__bounceIn"><i class="fa-solid fa-check"></i></div>
+        <h3 class="text-xl font-bold">¡Registro guardado correctamente!</h3>
+        <p class="text-slate-500 mt-1">Tu ${isIncome ? 'ingreso' : 'egreso'} quedó guardado y ya puedes consultarlo.</p>
+        <div class="mt-5 text-left rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-2 text-sm max-w-md mx-auto">
+          <div class="flex justify-between items-center"><span class="text-slate-500">Tipo</span>${UI.badge(isIncome ? 'Ingreso' : 'Egreso', isIncome ? 'emerald' : 'rose')}</div>
+          <div class="flex justify-between"><span class="text-slate-500">${isIncome ? 'Fuente' : 'Entidad'}</span><b>${Utils.escape(e.entity)}</b></div>
+          <div class="flex justify-between"><span class="text-slate-500">Valor</span><b>${Utils.money(e.amount)}</b></div>
+          <div class="flex justify-between"><span class="text-slate-500">Fecha</span><b>${Utils.fmtDate(e.date)}</b></div>
+          <div class="flex justify-between"><span class="text-slate-500">Método</span><b class="capitalize">${e.method}</b></div>
+          ${card ? `<div class="flex justify-between"><span class="text-slate-500">Tarjeta</span><b>${Utils.escape(card.name)}</b></div>` : ''}
+          ${(e.method === 'credito' && e.installments) ? `<div class="flex justify-between"><span class="text-slate-500">Cuotas</span><b>${e.installments.length} × ${Utils.money(e.installments[0].value)}</b></div>
+          <div class="flex justify-between"><span class="text-slate-500">Total con interés</span><b>${Utils.money(t.total)}</b></div>` : ''}
+        </div>
+        <div class="mt-6 flex flex-wrap gap-3 justify-center">
+          <button onclick="UI.closeModal()" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-medium">Cerrar</button>
+          <button onclick="Expenses.openDetail('${e.id}')" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-medium"><i class="fa-solid fa-eye"></i> Ver detalle</button>
+          <button onclick="Expenses.openForm()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold"><i class="fa-solid fa-plus"></i> Agregar nuevo registro</button>
+        </div>
+      </div>`;
   },
 
   /* ---------- DETALLE + CUOTAS ---------- */
