@@ -732,6 +732,49 @@ const Engine = {
     return { used, available, total, pct };
   },
 
+  /* --- DERIVADOS POR TARJETA --- */
+  cardDebt(card) {
+    return Utils.sum(
+      Repos.expenses.where(e => e.cardId === card.id && e.method === 'credito' && e.type !== 'ingreso')
+        .map(e => this.expenseTotals(this.refreshInstallmentStatus(e)).pending)
+    );
+  },
+  cardNextPayment(card) {
+    const out = [];
+    Repos.expenses.where(e => e.cardId === card.id && e.method === 'credito' && e.type !== 'ingreso').forEach(e => {
+      this.refreshInstallmentStatus(e);
+      (e.installments || []).forEach(c => { if (c.status !== 'pagada') out.push(c); });
+    });
+    out.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    return out[0] ? { date: out[0].dueDate, amount: out[0].value } : null;
+  },
+  cardMonthlyInstallments(card, months) {
+    return months.map(m => {
+      let total = 0;
+      Repos.expenses.where(e => e.cardId === card.id && e.method === 'credito' && e.installments).forEach(e => {
+        (e.installments || []).forEach(c => { if (c.dueDate.slice(0, 7) === m) total += c.value; });
+      });
+      return total;
+    });
+  },
+  cardFlow(card, months) {
+    return months.map(m => {
+      const exps = Repos.expenses.where(e => e.cardId === card.id && Utils.monthKey(e.date) === m);
+      return {
+        income: Utils.sum(exps.filter(e => e.type === 'ingreso'), e => e.amount),
+        outflow: Utils.sum(exps.filter(e => e.type !== 'ingreso'), e => e.amount),
+      };
+    });
+  },
+  cardTotals(card) {
+    const movs = Repos.expenses.where(e => e.cardId === card.id);
+    return {
+      count: movs.length,
+      income: Utils.sum(movs.filter(e => e.type === 'ingreso'), e => e.amount),
+      outflow: Utils.sum(movs.filter(e => e.type !== 'ingreso'), e => e.amount),
+    };
+  },
+
   /* --- TODAS LAS CUOTAS PENDIENTES (aplanadas) --- */
   pendingInstallments() {
     const out = [];
@@ -861,39 +904,89 @@ const Cards = {
   render() {
     const cards = Repos.cards.all();
     const credit = cards.filter(c => c.type === 'credito');
+    const debit = cards.filter(c => c.type === 'debito');
     const totalCupo = Utils.sum(credit, c => Number(c.cupoTotal) || 0);
     const used = Utils.sum(credit.map(c => Engine.cardUsage(c).used));
+    const totalDebt = Utils.sum(credit.map(c => Engine.cardDebt(c)));
+    const today = Utils.todayStr();
+
+    const actions = (c) => `<div class="flex gap-1">
+        <button onclick="event.stopPropagation();Cards.openForm('${c.id}')" class="w-8 h-8 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"><i class="fa-solid fa-pen text-xs"></i></button>
+        <button onclick="event.stopPropagation();Cards.remove('${c.id}')" class="w-8 h-8 grid place-items-center rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-500"><i class="fa-solid fa-trash text-xs"></i></button>
+      </div>`;
+
+    const creditTile = (c) => {
+      const debt = Engine.cardDebt(c);
+      const np = Engine.cardNextPayment(c);
+      const cut = c.cutDay ? Engine.billingDates(c, today).cut : null;
+      return `<div class="space-y-3">
+        <div class="cursor-pointer" onclick="Cards.openDetail('${c.id}')">${this.bankCardHTML(c)}</div>
+        <div class="grid grid-cols-3 gap-2 text-center text-xs surface rounded-xl p-2.5">
+          <div><p class="text-slate-500">Deuda</p><p class="font-bold ${debt>0?'text-rose-500':''}">${Utils.money(debt)}</p></div>
+          <div><p class="text-slate-500">Próx. pago</p><p class="font-bold">${np ? Utils.fmtDateShort(np.date) : '—'}</p></div>
+          <div><p class="text-slate-500">Corte</p><p class="font-bold">${cut ? Utils.fmtDateShort(cut) : '—'}</p></div>
+        </div>
+        <div class="flex items-center justify-between px-1">
+          <button onclick="Cards.openDetail('${c.id}')" class="text-xs font-semibold text-brand-600 hover:underline"><i class="fa-solid fa-chart-line"></i> Ver detalles y gráficas</button>
+          ${actions(c)}
+        </div>
+      </div>`;
+    };
+
+    const debitTile = (c) => {
+      const t = Engine.cardTotals(c);
+      return `<div class="space-y-3">
+        <div class="cursor-pointer" onclick="Cards.openDetail('${c.id}')">${this.bankCardHTML(c)}</div>
+        <div class="grid grid-cols-3 gap-2 text-center text-xs surface rounded-xl p-2.5">
+          <div><p class="text-slate-500">Ingresos</p><p class="font-bold text-emerald-500">${Utils.money(t.income)}</p></div>
+          <div><p class="text-slate-500">Egresos</p><p class="font-bold text-rose-500">${Utils.money(t.outflow)}</p></div>
+          <div><p class="text-slate-500">Movs.</p><p class="font-bold">${t.count}</p></div>
+        </div>
+        <div class="flex items-center justify-between px-1">
+          <button onclick="Cards.openDetail('${c.id}')" class="text-xs font-semibold text-brand-600 hover:underline"><i class="fa-solid fa-chart-line"></i> Ver detalles y gráficas</button>
+          ${actions(c)}
+        </div>
+      </div>`;
+    };
+
     return `
       <div class="view space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-xl font-bold">Mis tarjetas</h2>
-            <p class="text-sm text-slate-500">Gestiona tus tarjetas de crédito y débito, cortes y fechas de pago.</p>
+            <p class="text-sm text-slate-500">Cada tarjeta tiene sus propias fechas, deuda y gráficas. Haz clic en una para ver el detalle.</p>
           </div>
           <button onclick="Cards.openForm()" class="inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 shadow-soft"><i class="fa-solid fa-plus"></i> Agregar tarjeta</button>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          ${UI.kpi({ label: 'Tarjetas', value: cards.length, icon: 'fa-credit-card', color: 'brand' })}
-          ${UI.kpi({ label: 'Cupo total (crédito)', value: Utils.money(totalCupo), icon: 'fa-gauge-high', color: 'emerald' })}
-          ${UI.kpi({ label: 'Cupo utilizado', value: Utils.money(used), icon: 'fa-fire', color: 'rose', sub: totalCupo ? Utils.pct(used/totalCupo*100) + ' del total' : '' })}
-        </div>
-
         ${cards.length === 0
           ? UI.empty('Aún no tienes tarjetas registradas.', 'fa-credit-card', `<button onclick="Cards.openForm()" class="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-semibold">Agregar mi primera tarjeta</button>`)
-          : `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              ${cards.map(c => `
-                <div class="space-y-3">
-                  <div class="cursor-pointer" onclick="Cards.openDetail('${c.id}')">${this.bankCardHTML(c)}</div>
-                  <div class="flex items-center justify-between px-1">
-                    <span class="text-xs text-slate-500">${c.type === 'credito' ? 'Crédito' : 'Débito'} · ${Utils.escape(c.brand || '')}</span>
-                    <div class="flex gap-1">
-                      <button onclick="Cards.openForm('${c.id}')" class="w-8 h-8 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"><i class="fa-solid fa-pen text-xs"></i></button>
-                      <button onclick="Cards.remove('${c.id}')" class="w-8 h-8 grid place-items-center rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-500"><i class="fa-solid fa-trash text-xs"></i></button>
-                    </div>
-                  </div>
-                </div>`).join('')}
-            </div>`}
+          : `
+          <!-- ===== TARJETAS DE CRÉDITO ===== -->
+          <section class="space-y-4">
+            <div class="flex items-center gap-2">
+              <h3 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-credit-card text-brand-500"></i> Tarjetas de crédito</h3>
+              ${UI.badge(credit.length + (credit.length === 1 ? ' tarjeta' : ' tarjetas'), 'brand')}
+            </div>
+            ${credit.length ? `
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                ${UI.kpi({ label: 'Cupo total', value: Utils.money(totalCupo), icon: 'fa-gauge-high', color: 'brand' })}
+                ${UI.kpi({ label: 'Cupo utilizado', value: Utils.money(used), icon: 'fa-fire', color: 'amber', sub: totalCupo ? Utils.pct(used/totalCupo*100) + ' del total' : '' })}
+                ${UI.kpi({ label: 'Deuda total (crédito)', value: Utils.money(totalDebt), icon: 'fa-hand-holding-dollar', color: 'rose' })}
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">${credit.map(creditTile).join('')}</div>
+            ` : `<p class="text-sm text-slate-400">No tienes tarjetas de crédito. <button onclick="Cards.openForm()" class="text-brand-600 font-semibold hover:underline">Agregar una</button></p>`}
+          </section>
+
+          <!-- ===== TARJETAS DE DÉBITO ===== -->
+          <section class="space-y-4 pt-2">
+            <div class="flex items-center gap-2">
+              <h3 class="text-lg font-bold flex items-center gap-2"><i class="fa-solid fa-money-check text-emerald-500"></i> Tarjetas de débito</h3>
+              ${UI.badge(debit.length + (debit.length === 1 ? ' tarjeta' : ' tarjetas'), 'emerald')}
+            </div>
+            ${debit.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">${debit.map(debitTile).join('')}</div>`
+              : `<p class="text-sm text-slate-400">No tienes tarjetas de débito. <button onclick="Cards.openForm()" class="text-brand-600 font-semibold hover:underline">Agregar una</button></p>`}
+          </section>`}
       </div>`;
   },
 
@@ -970,37 +1063,79 @@ const Cards = {
     const c = Repos.cards.find(id); if (!c) return;
     const usage = Engine.cardUsage(c);
     const movements = Repos.expenses.where(e => e.cardId === id).sort((a, b) => b.date.localeCompare(a.date));
-    const dates = c.type === 'credito' ? Engine.billingDates(c, Utils.todayStr()) : null;
+    const isCredit = c.type === 'credito';
+    const dates = isCredit ? Engine.billingDates(c, Utils.todayStr()) : null;
+    const debt = isCredit ? Engine.cardDebt(c) : 0;
+    const np = isCredit ? Engine.cardNextPayment(c) : null;
+    const totals = Engine.cardTotals(c);
+
+    const creditStats = `
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div class="surface rounded-xl p-3"><p class="text-slate-500 text-xs">Cupo total</p><p class="font-bold">${Utils.money(usage.total)}</p></div>
+        <div class="surface rounded-xl p-3"><p class="text-slate-500 text-xs">Disponible</p><p class="font-bold text-emerald-500">${Utils.money(usage.available)}</p></div>
+        <div class="surface rounded-xl p-3"><p class="text-slate-500 text-xs">Deuda actual</p><p class="font-bold text-rose-500">${Utils.money(debt)}</p></div>
+        <div class="surface rounded-xl p-3"><p class="text-slate-500 text-xs">Uso del cupo</p><p class="font-bold">${Utils.pct(usage.pct)}</p></div>
+        <div class="surface rounded-xl p-3"><p class="text-slate-500 text-xs"><i class="fa-solid fa-scissors"></i> Próximo corte</p><p class="font-bold">${Utils.fmtDate(dates.cut)} <span class="text-xs text-slate-400">(día ${c.cutDay||'—'})</span></p></div>
+        <div class="surface rounded-xl p-3"><p class="text-slate-500 text-xs"><i class="fa-regular fa-calendar-check"></i> Próximo pago</p><p class="font-bold text-amber-600">${np ? Utils.fmtDate(np.date) + ' · ' + Utils.money(np.amount) : Utils.fmtDate(dates.firstPay)}</p></div>
+      </div>
+      <div class="mt-3">${UI.progress(usage.pct, usage.pct > 80 ? 'rose' : 'brand')}</div>`;
+
+    const debitStats = `
+      <div class="grid grid-cols-3 gap-3 text-sm">
+        <div class="surface rounded-xl p-3"><p class="text-slate-500 text-xs">Ingresos</p><p class="font-bold text-emerald-500">${Utils.money(totals.income)}</p></div>
+        <div class="surface rounded-xl p-3"><p class="text-slate-500 text-xs">Egresos</p><p class="font-bold text-rose-500">${Utils.money(totals.outflow)}</p></div>
+        <div class="surface rounded-xl p-3"><p class="text-slate-500 text-xs">Neto</p><p class="font-bold">${Utils.money(totals.income - totals.outflow)}</p></div>
+      </div>`;
+
     UI.modal({
       title: `${c.name} · ${c.bank}`,
-      size: 'max-w-2xl',
+      size: 'max-w-3xl',
       body: `
         <div class="grid sm:grid-cols-2 gap-5 items-start">
           <div>${this.bankCardHTML(c)}</div>
-          <div class="space-y-3 text-sm">
-            ${c.type === 'credito' ? `
-              <div class="flex justify-between"><span class="text-slate-500">Cupo total</span><b>${Utils.money(usage.total)}</b></div>
-              <div class="flex justify-between"><span class="text-slate-500">Cupo usado</span><b class="text-rose-500">${Utils.money(usage.used)}</b></div>
-              <div class="flex justify-between"><span class="text-slate-500">Cupo disponible</span><b class="text-emerald-500">${Utils.money(usage.available)}</b></div>
-              ${UI.progress(usage.pct, usage.pct > 80 ? 'rose' : 'brand')}
-              <div class="flex justify-between pt-2"><span class="text-slate-500">Próximo corte</span><b>${Utils.fmtDate(dates.cut)}</b></div>
-              <div class="flex justify-between"><span class="text-slate-500">Próximo pago</span><b>${Utils.fmtDate(dates.firstPay)}</b></div>
-            ` : `<div class="flex justify-between"><span class="text-slate-500">Tipo</span><b>Débito</b></div>
-                 <div class="flex justify-between"><span class="text-slate-500">Estado</span><b>${c.status}</b></div>`}
-            ${c.notes ? `<p class="text-slate-500 pt-2 border-t border-slate-200 dark:border-slate-800">${Utils.escape(c.notes)}</p>` : ''}
+          <div>${isCredit ? creditStats : debitStats}
+            ${c.notes ? `<p class="text-slate-500 text-sm mt-3 pt-3 border-t border-slate-200 dark:border-slate-800">${Utils.escape(c.notes)}</p>` : ''}
           </div>
         </div>
+
+        <h4 class="font-semibold mt-6 mb-2">${isCredit ? 'Cuotas a pagar por mes' : 'Ingresos vs egresos por mes'}</h4>
+        <div class="surface rounded-2xl p-4"><canvas id="card-detail-chart" height="120"></canvas></div>
+
         <h4 class="font-semibold mt-6 mb-2">Movimientos (${movements.length})</h4>
         <div class="max-h-64 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
           ${movements.length ? movements.map(e => `
-            <div class="flex items-center justify-between px-4 py-2.5 text-sm">
+            <div class="flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" onclick="Expenses.openDetail('${e.id}')">
               <div><p class="font-medium">${Utils.escape(e.entity)}</p><p class="text-xs text-slate-500">${Utils.fmtDate(e.date)} · ${e.method}${e.installmentsCount > 1 ? ' · ' + e.installmentsCount + ' cuotas' : ''}</p></div>
               <b class="${e.type === 'ingreso' ? 'text-emerald-500' : ''}">${e.type === 'ingreso' ? '+' : ''}${Utils.money(e.amount)}</b>
-            </div>`).join('') : `<p class="px-4 py-6 text-center text-slate-400 text-sm">Sin movimientos</p>`}
+            </div>`).join('') : `<p class="px-4 py-6 text-center text-slate-400 text-sm">Sin movimientos en esta tarjeta</p>`}
         </div>`,
       footer: `<button onclick="Cards.openForm('${id}')" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-medium">Editar</button>
                <button data-close class="px-4 py-2 rounded-xl bg-brand-600 text-white font-semibold">Cerrar</button>`,
+      onMount: () => this.drawDetailChart(c),
     });
+  },
+
+  drawDetailChart(c) {
+    if (!window.Chart) return;
+    const months = Charts.lastMonths(6);
+    const labels = months.map(Charts.monthLabel);
+    if (c.type === 'credito') {
+      Charts.make('card-detail-chart', {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Cuotas a pagar', data: Engine.cardMonthlyInstallments(c, months), backgroundColor: '#6366f1', borderRadius: 6 }] },
+        options: { plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: Charts.gridColor() }, ticks: { callback: v => Utils.number(v) } } } },
+      });
+    } else {
+      const fl = Engine.cardFlow(c, months);
+      Charts.make('card-detail-chart', {
+        type: 'bar',
+        data: { labels, datasets: [
+          { label: 'Ingresos', data: fl.map(x => x.income), backgroundColor: '#10b981', borderRadius: 6 },
+          { label: 'Egresos', data: fl.map(x => x.outflow), backgroundColor: '#6366f1', borderRadius: 6 },
+        ] },
+        options: { plugins: { legend: { position: 'bottom' } }, scales: { x: { grid: { display: false } }, y: { grid: { color: Charts.gridColor() }, ticks: { callback: v => Utils.number(v) } } } },
+      });
+    }
   },
 };
 
