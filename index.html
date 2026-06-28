@@ -233,7 +233,7 @@
           <span id="notif-badge" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full hidden"></span>
         </button>
         <button id="btn-theme" class="w-10 h-10 grid place-items-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-moon"></i></button>
-        <button id="btn-quick-add" class="hidden sm:inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 shadow-soft"><i class="fa-solid fa-plus"></i> Nuevo gasto</button>
+        <button id="btn-quick-add" class="hidden sm:inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 shadow-soft"><i class="fa-solid fa-plus"></i> Nuevo registro</button>
       </header>
 
       <!-- VISTAS -->
@@ -273,6 +273,7 @@ const CONFIG = {
   locale: 'es-CO',
   admin: { name: 'Andrés Acosta', email: 'andresacost12@gmail.com', password: 'andres12' },
   categories: ['Comida','Transporte','Ocio','Salud','Educación','Tecnología','Hogar','Servicios','Ropa','Mascotas','Viajes','Otros'],
+  incomeCategories: ['Salario','Freelance','Ventas','Negocio','Inversiones','Intereses','Reembolso','Bonificación','Regalo','Arriendo recibido','Otros'],
   banks: ['Bancolombia','Davivienda','Banco de Bogotá','BBVA','Nu','Scotiabank Colpatria','Falabella','Banco Popular','AV Villas','Itaú','Otro'],
   paymentDaysAhead: 7,   // ventana "próximo pago"
 };
@@ -1093,10 +1094,10 @@ const Expenses = {
       <div class="view space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 class="text-xl font-bold">Gastos y movimientos</h2>
-            <p class="text-sm text-slate-500">Registra compras, define cuotas y deja que el sistema calcule intereses y fechas de pago.</p>
+            <h2 class="text-xl font-bold">Ingresos y egresos</h2>
+            <p class="text-sm text-slate-500">Registra tus movimientos: egresos (con tarjeta, cuotas e intereses) e ingresos.</p>
           </div>
-          <button onclick="Expenses.openForm()" class="inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 shadow-soft"><i class="fa-solid fa-plus"></i> Registrar gasto</button>
+          <button onclick="Expenses.openForm()" class="inline-flex items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 shadow-soft"><i class="fa-solid fa-plus"></i> Agregar nuevo registro</button>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -1109,11 +1110,14 @@ const Expenses = {
         <!-- Filtros -->
         <div class="surface rounded-2xl p-4 flex flex-wrap gap-3 items-center">
           <input id="exp-filter-text" oninput="Expenses.applyFilters()" placeholder="Buscar entidad, descripción..." class="flex-1 min-w-[180px] rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none" />
+          <select id="exp-filter-type" onchange="Expenses.applyFilters()" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+            <option value="">Ingresos y egresos</option><option value="egreso">Solo egresos</option><option value="ingreso">Solo ingresos</option>
+          </select>
           <select id="exp-filter-method" onchange="Expenses.applyFilters()" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
             <option value="">Todos los métodos</option><option value="credito">Crédito</option><option value="debito">Débito</option><option value="efectivo">Efectivo</option>
           </select>
           <select id="exp-filter-cat" onchange="Expenses.applyFilters()" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-            <option value="">Todas las categorías</option>${CONFIG.categories.map(c => `<option value="${c}">${c}</option>`).join('')}
+            <option value="">Todas las categorías</option>${[...new Set([...CONFIG.categories, ...CONFIG.incomeCategories])].map(c => `<option value="${c}">${c}</option>`).join('')}
           </select>
         </div>
 
@@ -1123,10 +1127,12 @@ const Expenses = {
 
   applyFilters() {
     const text = ($('#exp-filter-text')?.value || '').toLowerCase();
+    const type = $('#exp-filter-type')?.value || '';
     const method = $('#exp-filter-method')?.value || '';
     const cat = $('#exp-filter-cat')?.value || '';
     let list = Repos.expenses.all().map(e => Engine.refreshInstallmentStatus(e));
     list = list.filter(e =>
+      (!type || (type === 'ingreso' ? e.type === 'ingreso' : e.type !== 'ingreso')) &&
       (!method || e.method === method) &&
       (!cat || e.category === cat) &&
       (!text || (e.entity + ' ' + (e.description||'') + ' ' + (e.tags||'') + ' ' + (e.category||'')).toLowerCase().includes(text))
@@ -1171,59 +1177,127 @@ const Expenses = {
       </div>`;
   },
 
-  /* ---------- FORMULARIO ---------- */
+  /* ---------- FORMULARIO (Ingreso / Egreso dinámico) ---------- */
   openForm(id = null) {
-    const e = id ? Repos.expenses.find(id) : {
+    const e = id ? { ...Repos.expenses.find(id) } : {
       type: 'egreso', date: Utils.todayStr(), time: new Date().toTimeString().slice(0,5),
-      method: 'credito', installmentsCount: 1, status: 'pendiente',
+      method: 'credito', installmentsCount: 1, status: 'pendiente', isNew: true,
     };
-    const cards = Repos.cards.all();
-    const creditCards = cards.filter(c => c.type === 'credito');
-    const cardOptions = [{ value: '', label: '— Selecciona tarjeta —' }, ...cards.map(c => ({ value: c.id, label: `${c.name} · ${c.bank} (${c.type})` }))];
-
     UI.modal({
-      title: id ? 'Editar gasto' : 'Registrar gasto',
+      title: id ? 'Editar registro' : 'Agregar nuevo registro',
       size: 'max-w-3xl',
       body: `
         <form id="exp-form" class="space-y-4" oninput="Expenses.recalc()">
-          <div class="grid sm:grid-cols-2 gap-4">
-            ${UI.field('Tipo', UI.select('type', [{value:'egreso',label:'Egreso (gasto)'},{value:'ingreso',label:'Ingreso'}], e.type))}
-            ${UI.field('Entidad / Comercio', UI.input('entity', { value: e.entity || '', placeholder: 'Ej: Éxito, Netflix...', required: true }))}
-            ${UI.field('Valor de la compra', UI.input('amount', { type: 'number', value: e.amount || '', placeholder: '0', min: 0, required: true, step: '0.01' }))}
-            ${UI.field('Categoría', UI.select('category', CONFIG.categories, e.category || 'Otros'))}
-            ${UI.field('Subcategoría', UI.input('subcategory', { value: e.subcategory || '', placeholder: 'Opcional' }))}
-            ${UI.field('Etiquetas', UI.input('tags', { value: e.tags || '', placeholder: 'separadas, por, comas' }))}
-            ${UI.field('Fecha', UI.input('date', { type: 'date', value: e.date || Utils.todayStr(), required: true }))}
-            ${UI.field('Hora', UI.input('time', { type: 'time', value: e.time || '' }))}
-            ${UI.field('Ciudad', UI.input('city', { value: e.city || '', placeholder: 'Opcional' }))}
-            ${UI.field('Método de pago', UI.select('method', [{value:'credito',label:'Tarjeta de crédito'},{value:'debito',label:'Tarjeta de débito'},{value:'efectivo',label:'Efectivo'}], e.method, 'onchange="Expenses.onMethodChange(this.form)"'))}
-            ${UI.field('Tarjeta asociada', UI.select('cardId', cardOptions, e.cardId || '', 'onchange="Expenses.recalc()"'))}
-            <div class="credit-only ${e.method !== 'credito' ? 'hidden' : ''}">${UI.field('Número de cuotas', UI.input('installmentsCount', { type: 'number', value: e.installmentsCount || 1, min: 1, extra: 'max=60' }))}</div>
+          <div>
+            <span class="text-sm font-medium">Tipo de registro</span>
+            <div class="mt-1 grid grid-cols-2 gap-2" id="type-toggle">
+              <button type="button" data-type="egreso" class="type-btn flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 font-semibold transition ${e.type !== 'ingreso' ? 'border-rose-500 bg-rose-50 text-rose-600 dark:bg-rose-500/10' : 'border-slate-300 dark:border-slate-700 text-slate-500'}"><i class="fa-solid fa-arrow-trend-down"></i> Egreso</button>
+              <button type="button" data-type="ingreso" class="type-btn flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 font-semibold transition ${e.type === 'ingreso' ? 'border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'border-slate-300 dark:border-slate-700 text-slate-500'}"><i class="fa-solid fa-arrow-trend-up"></i> Ingreso</button>
+            </div>
+            <input type="hidden" name="type" value="${e.type || 'egreso'}" />
           </div>
-
-          <!-- Panel de cálculo en vivo -->
-          <div id="calc-panel" class="credit-only ${e.method !== 'credito' ? 'hidden' : ''} rounded-2xl border border-brand-200 dark:border-brand-500/30 bg-brand-50 dark:bg-brand-500/10 p-4"></div>
-
-          <div class="grid sm:grid-cols-2 gap-4">
-            ${UI.field('Garantía hasta', UI.input('warranty', { type: 'date', value: e.warranty || '' }), 'Opcional, para alertas')}
-            <label class="block"><span class="text-sm font-medium">Comprobante (imagen)</span>
-              <input type="file" name="receiptFile" accept="image/*" onchange="Expenses.onReceipt(this)" class="mt-1 w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:text-white file:px-3 file:py-2 file:font-medium"/>
-              <input type="hidden" name="receipt" value="${e.receipt || ''}" />
-              <div id="receipt-preview" class="mt-2">${e.receipt ? `<img src="${e.receipt}" class="h-20 rounded-lg border border-slate-200"/>` : ''}</div>
-            </label>
-          </div>
-          ${UI.field('Descripción / Notas', UI.textarea('description', e.description || '', 'Detalle del gasto...'))}
-          <div class="non-credit ${e.method === 'credito' ? 'hidden' : ''}">
-            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="paidNow" ${e.status === 'pagado' ? 'checked' : ''} class="rounded"/> Marcar como pagado</label>
-          </div>
+          <div id="exp-fields">${this.formFields(e)}</div>
         </form>`,
       footer: `<button data-close class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-medium">Cancelar</button>
-               <button onclick="Expenses.save('${id || ''}')" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold">${id ? 'Guardar cambios' : 'Registrar'}</button>`,
-      onMount: () => this.recalc(),
+               <button onclick="Expenses.save('${id || ''}')" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold">${id ? 'Guardar cambios' : 'Guardar registro'}</button>`,
+      onMount: (wrap) => {
+        $('#type-toggle', wrap).addEventListener('click', (ev) => {
+          const b = ev.target.closest('[data-type]'); if (!b) return;
+          this.onTypeChange(b.dataset.type);
+        });
+        this.recalc();
+        this.creditWarning();
+      },
     });
-    if (!creditCards.length && e.method === 'credito') {
-      // aviso suave
-      setTimeout(() => { const p = $('#calc-panel'); if (p && !creditCards.length) p.innerHTML = `<p class="text-sm text-amber-600"><i class="fa-solid fa-triangle-exclamation"></i> No tienes tarjetas de crédito. <button type="button" class="underline" onclick="UI.closeModal();Router.go('cards')">Agrega una</button> para calcular cuotas y fechas.</p>`; }, 0);
+  },
+
+  // Genera SOLO los campos que cambian según el tipo (ingreso vs egreso)
+  formFields(e) {
+    const isIncome = e.type === 'ingreso';
+    const cards = Repos.cards.all();
+    const usableCards = isIncome ? cards.filter(c => c.type === 'debito') : cards;
+    const cardOptions = [{ value: '', label: isIncome ? '— Cuenta/tarjeta (opcional) —' : '— Selecciona tarjeta —' }, ...usableCards.map(c => ({ value: c.id, label: `${c.name} · ${c.bank} (${c.type})` }))];
+    const categories = isIncome ? CONFIG.incomeCategories : CONFIG.categories;
+    const methodOptions = isIncome
+      ? [{ value: 'debito', label: 'Tarjeta de débito' }, { value: 'efectivo', label: 'Efectivo' }]
+      : [{ value: 'credito', label: 'Tarjeta de crédito' }, { value: 'debito', label: 'Tarjeta de débito' }, { value: 'efectivo', label: 'Efectivo' }];
+    let method = e.method || (isIncome ? 'debito' : 'credito');
+    if (isIncome && method === 'credito') method = 'debito';
+    const isCredit = !isIncome && method === 'credito';
+
+    return `
+      <div class="grid sm:grid-cols-2 gap-4">
+        ${UI.field(isIncome ? 'Fuente / Origen' : 'Entidad / Comercio', UI.input('entity', { value: e.entity || '', placeholder: isIncome ? 'Ej: Salario, Cliente X, Venta...' : 'Ej: Éxito, Netflix...', required: true }))}
+        ${UI.field(isIncome ? 'Valor del ingreso' : 'Valor de la compra', UI.input('amount', { type: 'number', value: e.amount || '', placeholder: '0', min: 0, required: true, step: '0.01' }))}
+        ${UI.field('Categoría', UI.select('category', categories, e.category || categories[0]))}
+        ${UI.field('Subcategoría', UI.input('subcategory', { value: e.subcategory || '', placeholder: 'Opcional' }))}
+        ${UI.field('Etiquetas', UI.input('tags', { value: e.tags || '', placeholder: 'separadas, por, comas' }))}
+        ${UI.field('Fecha', UI.input('date', { type: 'date', value: e.date || Utils.todayStr(), required: true }))}
+        ${UI.field('Hora', UI.input('time', { type: 'time', value: e.time || '' }))}
+        ${UI.field('Ciudad', UI.input('city', { value: e.city || '', placeholder: 'Opcional' }))}
+        ${UI.field(isIncome ? 'Medio de recepción' : 'Método de pago', UI.select('method', methodOptions, method, 'onchange="Expenses.onMethodChange(this.form)"'))}
+        ${UI.field(isIncome ? 'Cuenta / Tarjeta débito' : 'Tarjeta asociada', UI.select('cardId', cardOptions, e.cardId || '', 'onchange="Expenses.recalc()"'))}
+        ${!isIncome ? `<div class="credit-only ${!isCredit ? 'hidden' : ''}">${UI.field('Número de cuotas', UI.input('installmentsCount', { type: 'number', value: e.installmentsCount || 1, min: 1, extra: 'max=60' }))}</div>` : ''}
+      </div>
+
+      ${!isIncome ? `<div id="calc-panel" class="credit-only ${!isCredit ? 'hidden' : ''} rounded-2xl border border-brand-200 dark:border-brand-500/30 bg-brand-50 dark:bg-brand-500/10 p-4"></div>` : ''}
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        ${!isIncome ? UI.field('Garantía hasta', UI.input('warranty', { type: 'date', value: e.warranty || '' }), 'Opcional, para alertas') : ''}
+        <label class="block"><span class="text-sm font-medium">Comprobante (imagen)</span>
+          <input type="file" name="receiptFile" accept="image/*" onchange="Expenses.onReceipt(this)" class="mt-1 w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:text-white file:px-3 file:py-2 file:font-medium"/>
+          <input type="hidden" name="receipt" value="${e.receipt || ''}" />
+          <div id="receipt-preview" class="mt-2">${e.receipt ? `<img src="${e.receipt}" class="h-20 rounded-lg border border-slate-200"/>` : ''}</div>
+        </label>
+      </div>
+      ${UI.field('Descripción / Notas', UI.textarea('description', e.description || '', isIncome ? 'Detalle del ingreso...' : 'Detalle del gasto...'))}
+      ${isIncome
+        ? ''
+        : `<div class="non-credit ${isCredit ? 'hidden' : ''}"><label class="flex items-center gap-2 text-sm"><input type="checkbox" name="paidNow" ${e.status === 'pagado' ? 'checked' : ''} class="rounded"/> Marcar como pagado</label></div>`}`;
+  },
+
+  // Lee de forma segura los valores actuales del formulario (campos que existan)
+  readForm(f) {
+    const g = n => (f.elements[n] ? f.elements[n].value : '');
+    return {
+      type: g('type'), entity: g('entity'), amount: g('amount'), category: g('category'),
+      subcategory: g('subcategory'), tags: g('tags'), date: g('date'), time: g('time'),
+      city: g('city'), method: g('method'), cardId: g('cardId'),
+      installmentsCount: g('installmentsCount') || 1, warranty: g('warranty'),
+      receipt: g('receipt'), description: g('description'),
+      status: (f.elements['paidNow'] && f.elements['paidNow'].checked) ? 'pagado' : 'pendiente',
+    };
+  },
+
+  // Cambia entre Ingreso/Egreso: reconstruye solo los campos necesarios
+  onTypeChange(type) {
+    const f = $('#exp-form'); if (!f) return;
+    const cur = this.readForm(f);
+    cur.type = type;
+    if (type === 'ingreso' && cur.method === 'credito') { cur.method = 'debito'; cur.cardId = ''; }
+    if (type === 'ingreso') cur.category = CONFIG.incomeCategories.includes(cur.category) ? cur.category : CONFIG.incomeCategories[0];
+    else cur.category = CONFIG.categories.includes(cur.category) ? cur.category : 'Otros';
+    f.elements['type'].value = type;
+    // estilos del toggle
+    $$('#type-toggle .type-btn').forEach(b => {
+      const active = b.dataset.type === type;
+      b.className = 'type-btn flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 font-semibold transition ' +
+        (active
+          ? (type === 'ingreso' ? 'border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'border-rose-500 bg-rose-50 text-rose-600 dark:bg-rose-500/10')
+          : 'border-slate-300 dark:border-slate-700 text-slate-500');
+    });
+    $('#exp-fields').innerHTML = this.formFields(cur);
+    this.recalc();
+    this.creditWarning();
+  },
+
+  // Aviso si se quiere crédito pero no hay tarjetas de crédito
+  creditWarning() {
+    const f = $('#exp-form'); if (!f) return;
+    const p = $('#calc-panel');
+    if (p && f.method && f.method.value === 'credito' && !Repos.cards.where(c => c.type === 'credito').length) {
+      p.innerHTML = `<p class="text-sm text-amber-600"><i class="fa-solid fa-triangle-exclamation"></i> No tienes tarjetas de crédito. <button type="button" class="underline" onclick="UI.closeModal();Router.go('cards')">Agrega una</button> para calcular cuotas y fechas.</p>`;
+      p.classList.remove('hidden');
     }
   },
 
@@ -1232,6 +1306,7 @@ const Expenses = {
     $$('.credit-only', form).forEach(el => el.classList.toggle('hidden', !isCredit));
     $$('.non-credit', form).forEach(el => el.classList.toggle('hidden', isCredit));
     this.recalc();
+    this.creditWarning();
   },
 
   onReceipt(input) {
@@ -1283,30 +1358,37 @@ const Expenses = {
 
   save(id) {
     const f = $('#exp-form');
+    const isIncome = f.type.value === 'ingreso';
     const amount = Number(f.amount.value) || 0;
-    if (!f.entity.value.trim() || amount <= 0) return Utils.toast('Entidad y valor son obligatorios', 'error');
+    if (!f.entity.value.trim() || amount <= 0) return Utils.toast('Origen/entidad y valor son obligatorios', 'error');
+
+    let method = f.method.value;
+    if (isIncome && method === 'credito') method = 'debito'; // un ingreso nunca es a crédito
 
     const data = {
       type: f.type.value, entity: f.entity.value.trim(), amount,
       category: f.category.value, subcategory: f.subcategory.value.trim(), tags: f.tags.value.trim(),
       date: f.date.value, time: f.time.value, city: f.city.value.trim(),
-      method: f.method.value, cardId: f.cardId.value || null,
-      installmentsCount: f.method.value === 'credito' ? Math.max(1, parseInt(f.installmentsCount.value) || 1) : 1,
-      warranty: f.warranty.value || null, receipt: f.receipt.value || null,
+      method, cardId: f.cardId.value || null,
+      installmentsCount: (!isIncome && method === 'credito') ? Math.max(1, parseInt(f.installmentsCount.value) || 1) : 1,
+      warranty: (!isIncome && f.warranty) ? (f.warranty.value || null) : null,
+      receipt: f.receipt.value || null,
       description: f.description.value.trim(),
-      status: (f.method.value !== 'credito' && f.paidNow?.checked) ? 'pagado' : 'pendiente',
     };
 
-    if (data.type === 'ingreso') { data.method = data.method; data.installmentsCount = 1; }
-
-    // Motor: si es crédito, fija la tasa del mes y genera cuotas
-    if (data.method === 'credito' && data.type !== 'ingreso') {
+    if (isIncome) {
+      // Ingreso: sin cuotas ni intereses, se considera recibido
+      data.status = 'recibido';
+      data.interestRate = 0;
+      data.installments = null;
+    } else if (method === 'credito') {
+      // Egreso a crédito: fija la tasa del mes y genera cuotas
+      data.status = 'pendiente';
       data.interestRate = Engine.rateForDate(data.date);
       const card = data.cardId ? Repos.cards.find(data.cardId) : null;
-      // Conservar pagos existentes si se edita
       const prev = id ? Repos.expenses.find(id) : null;
       data.installments = Engine.buildInstallments(data, card);
-      if (prev?.installments) {
+      if (prev?.installments) { // conservar cuotas ya pagadas al editar
         prev.installments.forEach((c, i) => {
           if (c.status === 'pagada' && data.installments[i]) {
             data.installments[i].status = 'pagada';
@@ -1315,11 +1397,16 @@ const Expenses = {
           }
         });
       }
-    } else { data.interestRate = 0; data.installments = null; }
+    } else {
+      // Egreso a débito/efectivo
+      data.status = (f.paidNow && f.paidNow.checked) ? 'pagado' : 'pendiente';
+      data.interestRate = 0;
+      data.installments = null;
+    }
 
-    if (id) { Repos.expenses.update(id, data); Utils.toast('Gasto actualizado'); }
-    else { Repos.expenses.insert(data); Utils.toast('Gasto registrado'); }
-    UI.closeModal(); Router.go(State.view === 'expenses' ? 'expenses' : State.view);
+    if (id) { Repos.expenses.update(id, data); Utils.toast('Registro actualizado'); }
+    else { Repos.expenses.insert(data); Utils.toast(isIncome ? 'Ingreso guardado' : 'Egreso guardado'); }
+    UI.closeModal(); Router.go(State.view);
   },
 
   /* ---------- DETALLE + CUOTAS ---------- */
@@ -2205,7 +2292,7 @@ const Notifications = {
  * ---------------------------------------------------------------- */
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-gauge-high', module: Dashboard, title: 'Dashboard' },
-  { id: 'expenses', label: 'Gastos', icon: 'fa-receipt', module: Expenses, title: 'Gastos y movimientos' },
+  { id: 'expenses', label: 'Ingresos y egresos', icon: 'fa-right-left', module: Expenses, title: 'Ingresos y egresos' },
   { id: 'payments', label: 'Centro de pagos', icon: 'fa-money-bill-transfer', module: Payments, title: 'Centro de pagos' },
   { id: 'cards', label: 'Tarjetas', icon: 'fa-credit-card', module: Cards, title: 'Tarjetas' },
   { id: 'rates', label: 'Intereses', icon: 'fa-percent', module: Rates, title: 'Tasas de interés' },
