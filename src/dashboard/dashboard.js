@@ -216,7 +216,7 @@ const Dashboard = {
         type: 'bar',
         data: { labels, datasets: [
           { label: 'Ingresos', data: months.map(m => Engine.monthFlow(m).income), backgroundColor: '#10b981', borderRadius: 6 },
-          { label: 'Gastos', data: months.map(m => Engine.monthFlow(m).outflow), backgroundColor: '#2563eb', borderRadius: 6 },
+          { label: 'Gastos', data: months.map(m => Engine.monthFlow(m).outflow), backgroundColor: '#0370d4', borderRadius: 6 },
         ]},
         options: { plugins: { legend: { position: 'bottom' } }, scales: { x: { grid: { display: false } }, y: { grid: { color: Charts.gridColor() }, ticks: { callback: v => Utils.number(v) } } } },
       });
@@ -244,7 +244,7 @@ const Dashboard = {
       Repos.cards.where(c => c.type === 'credito').forEach(c => {
         Charts.make(`dash-credit-${c.id}`, {
           type: 'bar',
-          data: { labels, datasets: [{ label: 'Cuotas a pagar', data: Engine.cardMonthlyInstallments(c, months), backgroundColor: '#2563eb', borderRadius: 6 }] },
+          data: { labels, datasets: [{ label: 'Cuotas a pagar', data: Engine.cardMonthlyInstallments(c, months), backgroundColor: '#0370d4', borderRadius: 6 }] },
           options: { plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: Charts.gridColor() }, ticks: { callback: v => Utils.number(v) } } } },
         });
       });
@@ -255,7 +255,7 @@ const Dashboard = {
           type: 'bar',
           data: { labels, datasets: [
             { label: 'Ingresos', data: fl.map(x => x.income), backgroundColor: '#10b981', borderRadius: 6 },
-            { label: 'Egresos', data: fl.map(x => x.outflow), backgroundColor: '#2563eb', borderRadius: 6 },
+            { label: 'Egresos', data: fl.map(x => x.outflow), backgroundColor: '#0370d4', borderRadius: 6 },
           ]},
           options: { plugins: { legend: { position: 'bottom' } }, scales: { x: { grid: { display: false } }, y: { grid: { color: Charts.gridColor() }, ticks: { callback: v => Utils.number(v) } } } },
         });

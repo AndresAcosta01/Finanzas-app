@@ -4,7 +4,7 @@
  * 16) HELPER DE GRÁFICOS (Chart.js)
  * ---------------------------------------------------------------- */
 const Charts = {
-  palette: ['#2563eb','#10b981','#f59e0b','#ef4444','#0ea5e9','#a855f7','#ec4899','#14b8a6','#f97316','#64748b','#84cc16','#eab308'],
+  palette: ['#0370d4','#10b981','#f59e0b','#ef4444','#0ea5e9','#a855f7','#ec4899','#14b8a6','#f97316','#64748b','#84cc16','#eab308'],
   destroyAll() { Object.values(State.charts).forEach(c => { try { c.destroy(); } catch {} }); State.charts = {}; },
   gridColor() { return UI.isDark() ? 'rgba(148,163,184,.15)' : 'rgba(100,116,139,.15)'; },
   tickColor() { return UI.isDark() ? '#94a3b8' : '#475569'; },

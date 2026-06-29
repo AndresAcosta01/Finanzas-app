@@ -5,7 +5,7 @@
  * ---------------------------------------------------------------- */
 const CARD_THEMES = {
   indigo:  ['#4f46e5', '#7c3aed'],
-  ocean:   ['#0ea5e9', '#2563eb'],
+  ocean:   ['#0ea5e9', '#0370d4'],
   emerald: ['#059669', '#0d9488'],
   sunset:  ['#f97316', '#db2777'],
   rose:    ['#e11d48', '#9f1239'],
@@ -275,7 +275,7 @@ const Cards = {
     if (c.type === 'credito') {
       Charts.make('card-detail-chart', {
         type: 'bar',
-        data: { labels, datasets: [{ label: 'Cuotas a pagar', data: Engine.cardMonthlyInstallments(c, months), backgroundColor: '#2563eb', borderRadius: 6 }] },
+        data: { labels, datasets: [{ label: 'Cuotas a pagar', data: Engine.cardMonthlyInstallments(c, months), backgroundColor: '#0370d4', borderRadius: 6 }] },
         options: { plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: Charts.gridColor() }, ticks: { callback: v => Utils.number(v) } } } },
       });
     } else {
@@ -284,7 +284,7 @@ const Cards = {
         type: 'bar',
         data: { labels, datasets: [
           { label: 'Ingresos', data: fl.map(x => x.income), backgroundColor: '#10b981', borderRadius: 6 },
-          { label: 'Egresos', data: fl.map(x => x.outflow), backgroundColor: '#2563eb', borderRadius: 6 },
+          { label: 'Egresos', data: fl.map(x => x.outflow), backgroundColor: '#0370d4', borderRadius: 6 },
         ] },
         options: { plugins: { legend: { position: 'bottom' } }, scales: { x: { grid: { display: false } }, y: { grid: { color: Charts.gridColor() }, ticks: { callback: v => Utils.number(v) } } } },
       });

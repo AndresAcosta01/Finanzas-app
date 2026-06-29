@@ -58,11 +58,11 @@ const App = {
     // recuperación simulada
     $('#link-forgot').addEventListener('click', async () => {
       if (!window.Swal) return alert('Recuperación simulada: contacta al admin.');
-      const { value: email } = await Swal.fire({ title: 'Recuperar contraseña', input: 'email', inputPlaceholder: 'Tu correo', showCancelButton: true, confirmButtonColor: '#2563eb', background: UI.isDark()?'#0f172a':'#fff', color: UI.isDark()?'#e2e8f0':'#0f172a' });
+      const { value: email } = await Swal.fire({ title: 'Recuperar contraseña', input: 'email', inputPlaceholder: 'Tu correo', showCancelButton: true, confirmButtonColor: '#0370d4', background: UI.isDark()?'#0f172a':'#fff', color: UI.isDark()?'#e2e8f0':'#0f172a' });
       if (!email) return;
       const exists = await Auth.forgot(email);
       if (!exists) return Utils.toast('Correo no registrado', 'error');
-      const { value: pass } = await Swal.fire({ title: 'Nueva contraseña', input: 'password', inputPlaceholder: 'Define una nueva', showCancelButton: true, confirmButtonColor: '#2563eb', background: UI.isDark()?'#0f172a':'#fff', color: UI.isDark()?'#e2e8f0':'#0f172a' });
+      const { value: pass } = await Swal.fire({ title: 'Nueva contraseña', input: 'password', inputPlaceholder: 'Define una nueva', showCancelButton: true, confirmButtonColor: '#0370d4', background: UI.isDark()?'#0f172a':'#fff', color: UI.isDark()?'#e2e8f0':'#0f172a' });
       if (!pass) return;
       await Auth.resetPassword(email, pass);
       Utils.toast('Contraseña actualizada, ya puedes ingresar');

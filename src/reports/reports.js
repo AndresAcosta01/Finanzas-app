@@ -20,7 +20,7 @@ const Reports = {
     const months = Charts.lastMonths(12);
     const labels = months.map(Charts.monthLabel);
     Charts.make('rep-monthly', { type: 'bar',
-      data: { labels, datasets: [{ label: 'Egresos', data: months.map(m => Engine.monthFlow(m).outflow), backgroundColor: '#2563eb', borderRadius: 5 }] },
+      data: { labels, datasets: [{ label: 'Egresos', data: months.map(m => Engine.monthFlow(m).outflow), backgroundColor: '#0370d4', borderRadius: 5 }] },
       options: { plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: Charts.gridColor() }, ticks: { callback: v => Utils.number(v) } } } } });
 
     const catMap = {};
@@ -38,7 +38,7 @@ const Reports = {
     Charts.make('rep-cmp', { type: 'line',
       data: { labels, datasets: [
         { label: 'Ingresos', data: months.map(m => Engine.monthFlow(m).income), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.12)', fill: true, tension: .35 },
-        { label: 'Egresos', data: months.map(m => Engine.monthFlow(m).outflow), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.12)', fill: true, tension: .35 },
+        { label: 'Egresos', data: months.map(m => Engine.monthFlow(m).outflow), borderColor: '#0370d4', backgroundColor: 'rgba(3,112,212,.14)', fill: true, tension: .35 },
       ]},
       options: { plugins: { legend: { position: 'bottom' } }, scales: { x: { grid: { display: false } }, y: { grid: { color: Charts.gridColor() }, ticks: { callback: v => Utils.number(v) } } } } });
   },

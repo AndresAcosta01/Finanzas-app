@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SYNARO — Todo tu dinero. Un solo lugar.</title>
   <meta name="description" content="SYNARO: control total de tu dinero — tarjetas, cuotas, intereses, presupuestos y metas, todo en un solo lugar." />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%232563eb'/><stop offset='1' stop-color='%2322d3ee'/></linearGradient></defs><path d='M24 2 43 13 43 35 24 46 5 35 5 13Z' fill='url(%23g)'/><text x='24' y='33' text-anchor='middle' font-family='sans-serif' font-size='26' font-weight='800' fill='white'>S</text></svg>" />
+  <link rel="icon" type="image/png" href="assets/logo-icon.png" />
 
   <!-- ============ DEPENDENCIAS (CDN) ============ -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -25,11 +25,11 @@
           },
           colors: {
             brand: {
-              50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',
-              500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a',
+              50:'#eef7ff',100:'#d9edff',200:'#bce0ff',300:'#8ecdff',400:'#52b0fb',
+              500:'#2493f1',600:'#0370d4',700:'#0a59ab',800:'#0e4a8a',900:'#123f72',
             },
             accent: {
-              400:'#22d3ee',500:'#06b6d4',600:'#0891b2',
+              300:'#5ee0f0',400:'#22d3ee',500:'#08a4da',600:'#0883b5',
             },
           },
           boxShadow: {
@@ -55,17 +55,14 @@
   <!-- ============================================================= -->
   <div id="auth-screen" class="min-h-screen w-full flex items-stretch">
     <!-- Panel ilustrativo -->
-    <div class="hidden lg:flex w-1/2 relative text-white p-12 flex-col justify-between overflow-hidden" style="background: radial-gradient(120% 80% at 0% 0%, #11315c 0%, #0a1426 48%, #060b18 100%);">
+    <div class="hidden lg:flex w-1/2 relative text-white p-12 flex-col justify-center gap-10 overflow-hidden" style="background: radial-gradient(120% 90% at 50% 0%, #0b1a33 0%, #060d1c 55%, #03060f 100%);">
       <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-cyan-400/10 blur-3xl"></div>
-      <div class="absolute bottom-0 -left-20 w-96 h-96 rounded-full bg-blue-500/20 blur-3xl"></div>
+      <div class="absolute bottom-0 -left-20 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl"></div>
       <div class="relative z-10">
-        <!-- Logo real de SYNARO (recorte superior del PNG de marca) -->
-        <div class="mx-auto w-full max-w-sm rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl" style="position:relative; padding-bottom:41.33%;">
-          <img src="assets/Logo-Slogan.png" alt="SYNARO — Todo tu dinero. Un solo lugar." style="position:absolute; inset:0; width:100%;" />
-        </div>
-        <p class="mt-10 text-center text-white/80 max-w-md mx-auto">Controla tarjetas, cuotas, intereses, presupuestos y metas. <span class="text-cyan-300 font-semibold">Todo tu dinero, un solo lugar.</span></p>
+        <!-- Logo real de SYNARO -->
+        <img src="assets/logo-stacked.png" alt="SYNARO — Todo tu dinero. Un solo lugar." class="mx-auto w-full max-w-md drop-shadow-2xl" />
       </div>
-      <ul class="relative z-10 space-y-3 text-white/90">
+      <ul class="relative z-10 space-y-3 text-white/90 max-w-md mx-auto w-full">
         <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-cyan-300"></i> Cálculo automático de cuotas e intereses por mes</li>
         <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-cyan-300"></i> Tarjetas visuales con cortes y fechas de pago</li>
         <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-cyan-300"></i> Reportes, presupuestos y asistente financiero</li>
@@ -76,13 +73,7 @@
     <div class="w-full lg:w-1/2 flex items-center justify-center p-6">
       <div class="w-full max-w-md">
         <div class="lg:hidden flex items-center gap-3 mb-8 justify-center">
-          <div class="w-12 h-12">
-            <svg viewBox="0 0 48 48" class="w-full h-full" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <defs><linearGradient id="syn-mob" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
-              <path d="M24 2 43 13 43 35 24 46 5 35 5 13Z" fill="url(#syn-mob)"/>
-              <text x="24" y="33" text-anchor="middle" font-family="Inter, sans-serif" font-size="26" font-weight="800" fill="#fff">S</text>
-            </svg>
-          </div>
+          <img src="assets/logo-icon.png" alt="SYNARO" class="w-12 h-12 rounded-xl shadow-soft" />
           <div class="leading-none">
             <span class="text-2xl font-extrabold tracking-[0.22em]">SYNARO</span>
             <p class="text-[10px] tracking-widest text-slate-400 mt-1">TODO TU DINERO. UN SOLO LUGAR.</p>
@@ -161,13 +152,7 @@
     <!-- SIDEBAR -->
     <aside id="sidebar" class="fixed z-40 inset-y-0 left-0 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col -translate-x-full lg:translate-x-0 transition-transform duration-300">
       <div class="h-16 flex items-center gap-3 px-5 border-b border-slate-200 dark:border-slate-800">
-        <div class="w-9 h-9 flex-shrink-0">
-          <svg viewBox="0 0 48 48" class="w-full h-full" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <defs><linearGradient id="syn-side" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
-            <path d="M24 2 43 13 43 35 24 46 5 35 5 13Z" fill="url(#syn-side)"/>
-            <text x="24" y="33" text-anchor="middle" font-family="Inter, sans-serif" font-size="26" font-weight="800" fill="#fff">S</text>
-          </svg>
-        </div>
+        <img src="assets/logo-icon.png" alt="SYNARO" class="w-9 h-9 rounded-lg flex-shrink-0" />
         <div class="leading-none">
           <span class="text-lg font-extrabold tracking-[0.2em]">SYNARO</span>
           <p class="text-[9px] tracking-widest text-slate-400 mt-0.5">TODO TU DINERO. UN SOLO LUGAR.</p>
