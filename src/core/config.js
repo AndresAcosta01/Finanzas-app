@@ -11,7 +11,8 @@
  * 1) CONFIGURACIÓN GLOBAL
  * ---------------------------------------------------------------- */
 const CONFIG = {
-  appName: 'Finanzas PRO',
+  appName: 'SYNARO',
+  slogan: 'Todo tu dinero. Un solo lugar.',
   version: '1.0.0',
   storagePrefix: 'finpro:',
   currency: 'COP',

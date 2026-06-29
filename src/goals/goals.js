@@ -62,7 +62,7 @@ const Goals = {
   async addFunds(id) {
     const g = Repos.goals.find(id);
     if (window.Swal) {
-      const { value } = await Swal.fire({ title: `Abonar a "${g.name}"`, input: 'number', inputLabelText: 'Monto', inputPlaceholder: '0', showCancelButton: true, confirmButtonColor: '#4f46e5', background: UI.isDark()?'#0f172a':'#fff', color: UI.isDark()?'#e2e8f0':'#0f172a' });
+      const { value } = await Swal.fire({ title: `Abonar a "${g.name}"`, input: 'number', inputLabelText: 'Monto', inputPlaceholder: '0', showCancelButton: true, confirmButtonColor: '#2563eb', background: UI.isDark()?'#0f172a':'#fff', color: UI.isDark()?'#e2e8f0':'#0f172a' });
       if (value) { Repos.goals.update(id, { current: (g.current||0) + Number(value) }); Utils.toast('Abono registrado'); Router.go('goals'); }
     } else { const v = prompt('Monto a abonar'); if (v) { Repos.goals.update(id, { current: (g.current||0) + Number(v) }); Router.go('goals'); } }
   },

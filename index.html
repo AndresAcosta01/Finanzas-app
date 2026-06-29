@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Finanzas PRO — Centro Financiero Personal Inteligente</title>
-  <meta name="description" content="Finanzas PRO: control total de gastos, tarjetas, cuotas, intereses, presupuestos y metas." />
+  <title>SYNARO — Todo tu dinero. Un solo lugar.</title>
+  <meta name="description" content="SYNARO: control total de tu dinero — tarjetas, cuotas, intereses, presupuestos y metas, todo en un solo lugar." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%232563eb'/><stop offset='1' stop-color='%2322d3ee'/></linearGradient></defs><path d='M24 2 43 13 43 35 24 46 5 35 5 13Z' fill='url(%23g)'/><text x='24' y='33' text-anchor='middle' font-family='sans-serif' font-size='26' font-weight='800' fill='white'>S</text></svg>" />
 
   <!-- ============ DEPENDENCIAS (CDN) ============ -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -24,8 +25,11 @@
           },
           colors: {
             brand: {
-              50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',
-              500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81',
+              50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',
+              500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a',
+            },
+            accent: {
+              400:'#22d3ee',500:'#06b6d4',600:'#0891b2',
             },
           },
           boxShadow: {
@@ -51,21 +55,20 @@
   <!-- ============================================================= -->
   <div id="auth-screen" class="min-h-screen w-full flex items-stretch">
     <!-- Panel ilustrativo -->
-    <div class="hidden lg:flex w-1/2 relative bg-gradient-to-br from-brand-700 via-brand-600 to-indigo-800 text-white p-12 flex-col justify-between overflow-hidden">
-      <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/10 blur-2xl"></div>
-      <div class="absolute bottom-0 -left-20 w-96 h-96 rounded-full bg-indigo-400/20 blur-3xl"></div>
+    <div class="hidden lg:flex w-1/2 relative text-white p-12 flex-col justify-between overflow-hidden" style="background: radial-gradient(120% 80% at 0% 0%, #11315c 0%, #0a1426 48%, #060b18 100%);">
+      <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-cyan-400/10 blur-3xl"></div>
+      <div class="absolute bottom-0 -left-20 w-96 h-96 rounded-full bg-blue-500/20 blur-3xl"></div>
       <div class="relative z-10">
-        <div class="flex items-center gap-3">
-          <div class="w-11 h-11 rounded-xl bg-white/15 grid place-items-center text-2xl"><i class="fa-solid fa-chart-pie"></i></div>
-          <span class="text-2xl font-extrabold tracking-tight">Finanzas <span class="font-light">PRO</span></span>
+        <!-- Logo real de SYNARO (recorte superior del PNG de marca) -->
+        <div class="mx-auto w-full max-w-sm rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl" style="position:relative; padding-bottom:41.33%;">
+          <img src="assets/Logo-Slogan.png" alt="SYNARO — Todo tu dinero. Un solo lugar." style="position:absolute; inset:0; width:100%;" />
         </div>
-        <h1 class="mt-16 text-4xl font-extrabold leading-tight">Tu centro financiero<br/>personal inteligente.</h1>
-        <p class="mt-4 text-white/80 max-w-md">Controla tarjetas, cuotas, intereses, presupuestos y metas en un solo lugar. Diseñado para que tomes el control total de tu dinero.</p>
+        <p class="mt-10 text-center text-white/80 max-w-md mx-auto">Controla tarjetas, cuotas, intereses, presupuestos y metas. <span class="text-cyan-300 font-semibold">Todo tu dinero, un solo lugar.</span></p>
       </div>
       <ul class="relative z-10 space-y-3 text-white/90">
-        <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check"></i> Cálculo automático de cuotas e intereses por mes</li>
-        <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check"></i> Tarjetas visuales con cortes y fechas de pago</li>
-        <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check"></i> Reportes, presupuestos y asistente financiero</li>
+        <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-cyan-300"></i> Cálculo automático de cuotas e intereses por mes</li>
+        <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-cyan-300"></i> Tarjetas visuales con cortes y fechas de pago</li>
+        <li class="flex items-center gap-3"><i class="fa-solid fa-circle-check text-cyan-300"></i> Reportes, presupuestos y asistente financiero</li>
       </ul>
     </div>
 
@@ -73,8 +76,17 @@
     <div class="w-full lg:w-1/2 flex items-center justify-center p-6">
       <div class="w-full max-w-md">
         <div class="lg:hidden flex items-center gap-3 mb-8 justify-center">
-          <div class="w-11 h-11 rounded-xl bg-brand-600 text-white grid place-items-center text-2xl"><i class="fa-solid fa-chart-pie"></i></div>
-          <span class="text-2xl font-extrabold tracking-tight">Finanzas <span class="font-light text-brand-600">PRO</span></span>
+          <div class="w-12 h-12">
+            <svg viewBox="0 0 48 48" class="w-full h-full" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <defs><linearGradient id="syn-mob" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+              <path d="M24 2 43 13 43 35 24 46 5 35 5 13Z" fill="url(#syn-mob)"/>
+              <text x="24" y="33" text-anchor="middle" font-family="Inter, sans-serif" font-size="26" font-weight="800" fill="#fff">S</text>
+            </svg>
+          </div>
+          <div class="leading-none">
+            <span class="text-2xl font-extrabold tracking-[0.22em]">SYNARO</span>
+            <p class="text-[10px] tracking-widest text-slate-400 mt-1">TODO TU DINERO. UN SOLO LUGAR.</p>
+          </div>
         </div>
 
         <!-- LOGIN -->
@@ -149,8 +161,17 @@
     <!-- SIDEBAR -->
     <aside id="sidebar" class="fixed z-40 inset-y-0 left-0 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col -translate-x-full lg:translate-x-0 transition-transform duration-300">
       <div class="h-16 flex items-center gap-3 px-5 border-b border-slate-200 dark:border-slate-800">
-        <div class="w-9 h-9 rounded-xl bg-brand-600 text-white grid place-items-center"><i class="fa-solid fa-chart-pie"></i></div>
-        <span class="text-lg font-extrabold tracking-tight">Finanzas <span class="font-light text-brand-600">PRO</span></span>
+        <div class="w-9 h-9 flex-shrink-0">
+          <svg viewBox="0 0 48 48" class="w-full h-full" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs><linearGradient id="syn-side" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+            <path d="M24 2 43 13 43 35 24 46 5 35 5 13Z" fill="url(#syn-side)"/>
+            <text x="24" y="33" text-anchor="middle" font-family="Inter, sans-serif" font-size="26" font-weight="800" fill="#fff">S</text>
+          </svg>
+        </div>
+        <div class="leading-none">
+          <span class="text-lg font-extrabold tracking-[0.2em]">SYNARO</span>
+          <p class="text-[9px] tracking-widest text-slate-400 mt-0.5">TODO TU DINERO. UN SOLO LUGAR.</p>
+        </div>
       </div>
       <nav id="nav-menu" class="flex-1 overflow-y-auto p-3 space-y-1 text-sm"></nav>
       <div class="p-3 border-t border-slate-200 dark:border-slate-800">
@@ -182,7 +203,7 @@
       <main id="main-content" class="flex-1 p-4 sm:p-6 max-w-[1400px] w-full mx-auto"></main>
 
       <footer class="px-6 py-4 text-center text-xs text-slate-400">
-        Finanzas PRO · Datos guardados localmente en tu navegador · <span id="footer-year"></span>
+        <b class="text-slate-500 dark:text-slate-300">SYNARO</b> · Todo tu dinero, un solo lugar · Datos guardados en tu navegador · <span id="footer-year"></span>
       </footer>
     </div>
   </div>

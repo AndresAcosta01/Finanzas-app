@@ -19,12 +19,12 @@ const Backup = {
       },
     };
   },
-  exportJSON() { this.download(`finanzas-pro-respaldo-${Utils.todayStr()}.json`, JSON.stringify(this.snapshot(), null, 2)); Utils.toast('Respaldo exportado'); },
+  exportJSON() { this.download(`synaro-respaldo-${Utils.todayStr()}.json`, JSON.stringify(this.snapshot(), null, 2)); Utils.toast('Respaldo exportado'); },
   exportCSV() {
     const rows = [['ID','Fecha','Entidad','Tipo','Categoria','Metodo','Monto','Cuotas','Tasa','Estado']];
     Repos.expenses.all().forEach(e => rows.push([e.id, e.date, e.entity, e.type, e.category, e.method, e.amount, e.installmentsCount, e.interestRate||0, e.status]));
     const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g,'""')}"`).join(',')).join('\n');
-    this.download(`finanzas-pro-gastos-${Utils.todayStr()}.csv`, csv, 'text/csv');
+    this.download(`synaro-movimientos-${Utils.todayStr()}.csv`, csv, 'text/csv');
     Utils.toast('CSV exportado');
   },
   async importJSON(file) {
