@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    html, body { height: 100%; }
+    body { -webkit-font-smoothing: antialiased; }
+
+    /* Scrollbar moderno */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(120,120,140,.35); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(120,120,140,.6); background-clip: padding-box; }
+
+    /* Glass / superficies (CSS plano: el CDN de Tailwind no procesa @apply aquí) */
+    .glass { backdrop-filter: blur(14px); }
+    .surface { background:#ffffff; border:1px solid #e2e8f0; }
+    .dark .surface { background:#0f172a; border-color:#1e293b; }
+
+    /* Tarjeta bancaria 3D */
+    .bank-card {
+      aspect-ratio: 1.586/1;
+      border-radius: 1.25rem;
+      position: relative;
+      overflow: hidden;
+      color: #fff;
+      transform-style: preserve-3d;
+      transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s;
+      box-shadow: 0 18px 40px -16px rgba(0,0,0,.55);
+    }
+    .bank-card:hover { transform: translateY(-6px) rotateX(4deg) rotateY(-4deg) scale(1.015); }
+    .bank-card::after {
+      content:''; position:absolute; inset:0;
+      background: radial-gradient(120% 120% at 0% 0%, rgba(255,255,255,.28), transparent 45%);
+      pointer-events:none;
+    }
+    .bank-card .chip {
+      width: 44px; height: 34px; border-radius: 7px;
+      background: linear-gradient(135deg,#f5d57e,#c79a3a);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+    }
+    .card-stripe { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.08) 0 12px, transparent 12px 24px); }
+
+    /* Nav activo */
+    .nav-link.active { background:#4f46e5; color:#fff; box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.10); }
+    .nav-link.active i { color:#fff !important; }
+
+    /* Transición de vistas */
+    .view { animation: fadeUp .35s ease both; }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+
+    /* Skeleton shimmer */
+    .skeleton { position: relative; overflow: hidden; background: rgba(148,163,184,.18); }
+    .skeleton::after { content:''; position:absolute; inset:0; transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent); animation: shimmer 1.4s infinite; }
+
+    .ring-progress { transition: stroke-dashoffset .6s ease; }
+
+    [x-cloak], .hidden-init { display: none !important; }
+    input, select, textarea { color-scheme: light dark; }
+
+    /* Listas desplegables (select) legibles en claro y oscuro */
+    select.bg-transparent { background-color: #ffffff; color: #0f172a; }
+    .dark select.bg-transparent { background-color: #0f172a; color: #e2e8f0; }
+    select option { background-color: #ffffff; color: #0f172a; }
+    .dark select option { background-color: #1e293b; color: #e2e8f0; }
